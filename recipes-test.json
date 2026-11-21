@@ -1,0 +1,127 @@
+{
+  "metadata": {
+    "name": "Przepisy dla 2 osób — baza testowa",
+    "createdAt": "2026-11-21",
+    "purpose": "Niewielki zestaw publicznych przepisów do testów wyszukiwania, kategorii i późniejszego filtra diety.",
+    "important": "To są kandydaci, nie zatwierdzone przepisy. Opisy typu 'low histamine' lub 'gluten-free' pochodzą od autora źródła i nie zastępują reguł aplikacji ani decyzji administratora.",
+    "copyright": "Przechowujemy tytuł, krótkie metadane, listę składników potrzebną do filtrowania oraz link. Pełny opis przygotowania zostaje na stronie źródłowej."
+  },
+  "recipes": [
+    {
+      "id": "omlet-bez-glutenu-na-slodko",
+      "title": "Omlet bez glutenu na słodko",
+      "category": "sniadanie",
+      "source": {
+        "publisher": "Przystań Bez Glutenu",
+        "url": "https://www.przystanbezglutenu.pl/przepisy/omlet-bez-glutenu-na-slodko-"
+      },
+      "sourceClaims": ["bez glutenu"],
+      "timeMinutes": 30,
+      "ingredients": ["certyfikowana mąka owsiana bezglutenowa", "certyfikowana mąka jaglana bezglutenowa", "jajka", "banan", "jogurt", "bezglutenowy proszek do pieczenia", "cynamon", "masło klarowane", "borówki", "masło z nerkowców"],
+      "dietReview": "do_sprawdzenia",
+      "testNote": "Dobry kandydat do pokazania Kasi; dla Emilki filtr powinien rozpoznać produkty mleczne jako wymagające eliminacji."
+    },
+    {
+      "id": "sweet-potato-breakfast-hash",
+      "title": "Sweet Potato Breakfast Hash",
+      "titlePl": "Śniadaniowa pieczona mieszanka z batatów",
+      "category": "sniadanie",
+      "source": {
+        "publisher": "Histamine Harmony",
+        "url": "https://histamineharmony.com/sweet-potato-hash-a-colorful-and-nutritious-low-histamine-breakfast/"
+      },
+      "sourceClaims": ["low histamine", "paleo"],
+      "timeMinutes": 38,
+      "ingredients": ["bataty", "fioletowe ziemniaki", "brukselka", "czerwona cebula", "czosnek", "cebula w proszku", "oliwa z oliwek", "sól", "jajka (opcjonalnie)", "zioła"],
+      "dietReview": "do_sprawdzenia",
+      "testNote": "Zawiera ogólne 'sól' — aplikacja ma ją traktować jako zaakceptowaną sól niejodowaną. Jajka są osobnym składnikiem do oceny według bazy Histamina."
+    },
+    {
+      "id": "asian-chicken-with-rice",
+      "title": "Asian chicken with rice",
+      "titlePl": "Kurczak azjatycki z ryżem",
+      "category": "obiad",
+      "source": {
+        "publisher": "HistaFood",
+        "url": "https://histafood.eu/en/blogs/rezepte/asia-chicken-mit-reis"
+      },
+      "sourceClaims": ["low histamine", "gluten-free", "lactose-free"],
+      "timeMinutes": 20,
+      "servings": 2,
+      "ingredients": ["ryż basmati", "pierś z kurczaka", "papryka", "cukinia", "czosnek", "biała cebula", "bazylia tajska", "kolendra", "imbir", "sos", "sól", "olej kokosowy", "sezam", "woda"],
+      "dietReview": "do_sprawdzenia",
+      "testNote": "Celowo zawiera nieprecyzyjny składnik 'sos'; powinien dostać status wymagający doprecyzowania, a nie automatyczne zatwierdzenie."
+    },
+    {
+      "id": "baked-chicken-rice-casserole",
+      "title": "Baked Chicken & Rice Casserole",
+      "titlePl": "Zapiekanka z kurczakiem i ryżem",
+      "category": "obiad",
+      "source": {
+        "publisher": "Histamine Harmony",
+        "url": "https://histamineharmony.com/baked-chicken-rice-casserole-simple-low-histamine-meal/"
+      },
+      "sourceClaims": ["low histamine"],
+      "timeMinutes": 70,
+      "ingredients": ["oliwa z oliwek", "pierś z kurczaka", "czerwona lub biała cebula", "brązowy ryż", "bulion z kurczaka", "sól morska"],
+      "dietReview": "do_sprawdzenia",
+      "testNote": "Test rozpoznawania produktu złożonego: bulion wymaga osobnego sprawdzenia składu."
+    },
+    {
+      "id": "low-histamine-chicken-fried-rice",
+      "title": "Low Histamine Chicken Fried Rice",
+      "titlePl": "Smażony ryż z kurczakiem",
+      "category": "obiad",
+      "source": {
+        "publisher": "Histamine Harmony",
+        "url": "https://histamineharmony.com/low-histamine-chicken-fried-rice-easy-weeknight-dinner/"
+      },
+      "sourceClaims": ["low histamine"],
+      "ingredients": ["olej kokosowy", "udka z kurczaka", "cebula", "czosnek", "imbir", "marchew", "groszek", "ugotowany ryż", "jajka", "coconut aminos", "olej sezamowy", "dymka", "sezam", "sól morska"],
+      "dietReview": "do_sprawdzenia",
+      "testNote": "Kandydat do przetestowania mapowania angielskiej nazwy handlowej 'coconut aminos' oraz składników opcjonalnych."
+    },
+    {
+      "id": "chicken-and-veggie-soup",
+      "title": "Low Histamine AIP Chicken and Veggie Soup",
+      "titlePl": "Zupa z kurczakiem i warzywami",
+      "category": "obiad",
+      "source": {
+        "publisher": "Histamine Harmony",
+        "url": "https://histamineharmony.com/low-histamine-aip-chicken-and-veggie-soup/"
+      },
+      "sourceClaims": ["low histamine", "AIP"],
+      "ingredients": ["ugotowany kurczak", "bulion z kurczaka", "czerwona cebula", "olej z awokado", "kapusta", "marchew", "czosnek", "imbir", "sól", "świeże zioła"],
+      "dietReview": "do_sprawdzenia",
+      "testNote": "Przepis sprawdza, czy aplikacja odróżnia składnik świeży od przetworzonego/ugotowanego oraz oznacza niejednoznaczności."
+    },
+    {
+      "id": "instant-pot-beef-pot-roast",
+      "title": "Instant Pot Low Histamine Beef Pot Roast",
+      "titlePl": "Wołowina duszona z warzywami",
+      "category": "obiad",
+      "source": {
+        "publisher": "Histamine Harmony",
+        "url": "https://histamineharmony.com/instant-pot-low-histamine-beef-pot-roast/"
+      },
+      "sourceClaims": ["low histamine"],
+      "ingredients": ["oliwa z oliwek", "wołowina", "sól", "bulion", "mieszanka włoskich ziół", "czosnek w proszku", "cebula", "marchew", "ziemniaki", "fasolka szparagowa", "pietruszka"],
+      "dietReview": "do_sprawdzenia",
+      "testNote": "Kandydat z mieszanką przypraw i bulionem — oba pola wymagają kontroli, a nie prostego dopasowania nazwy."
+    },
+    {
+      "id": "garlic-herb-roasted-chicken",
+      "title": "Easy Low Histamine Roasted Chicken with Garlic and Fresh Herbs",
+      "titlePl": "Pieczony kurczak z czosnkiem i świeżymi ziołami",
+      "category": "obiad",
+      "source": {
+        "publisher": "Histamine Harmony",
+        "url": "https://histamineharmony.com/whole-roasted-chicken-with-garlic-and-herbs-low-histamine/"
+      },
+      "sourceClaims": ["low histamine"],
+      "ingredients": ["cały kurczak", "sól", "tymianek", "rozmaryn", "szałwia", "masło", "czosnek", "cebula", "bulion z kurczaka"],
+      "dietReview": "do_sprawdzenia",
+      "testNote": "Intencjonalny test eliminacji dla Emilki: obecność masła powinna uruchomić regułę kazeiny."
+    }
+  ]
+}

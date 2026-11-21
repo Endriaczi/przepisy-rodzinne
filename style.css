@@ -1,0 +1,46 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f7f5f0;
+  color: #202722;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: #f7f5f0; }
+button, input { font: inherit; }
+button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.app { width: min(100%, 480px); min-height: 100dvh; margin: 0 auto; background: #fffdf9; }
+.screen { min-height: 100dvh; padding: max(18px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom)); }
+.hidden { display: none; }
+
+.screen--people { display: grid; grid-template-rows: 1fr 1fr; gap: 16px; }
+.person-card { min-height: 0; border: 0; border-radius: 26px; overflow: hidden; display: grid; grid-template-rows: 1fr auto; padding: 0; text-align: left; box-shadow: 0 6px 20px #27322217; transition: transform .15s, box-shadow .15s; }
+.person-card:active { transform: scale(.985); box-shadow: 0 2px 9px #27322222; }
+.portrait { display: grid; place-items: center; text-align: center; color: #657064; line-height: 1.45; font-size: .9rem; }
+.person-card--emilka .portrait { background: linear-gradient(135deg, #e6edf0, #b4cbd0); }
+.person-card--kasia .portrait { background: linear-gradient(135deg, #f5e5d3, #e5bd9b); }
+.person-name { padding: 16px 20px 18px; background: #fff; font-size: 1.3rem; font-weight: 700; }
+
+.topbar { display: flex; align-items: center; gap: 14px; min-height: 52px; margin-bottom: 28px; }
+.topbar h1 { font-size: 1.35rem; margin: 0; }
+.back { width: 48px; height: 48px; border: 0; background: #edf1ec; border-radius: 50%; font-size: 1.6rem; line-height: 1; }
+.screen-label, .ingredient-label { display: block; font-weight: 700; margin: 0 0 12px; }
+.categories { display: grid; gap: 10px; margin-bottom: 32px; }
+.category { min-height: 60px; padding: 14px 16px; border: 2px solid #dfe6de; border-radius: 16px; background: #fff; text-align: left; font-weight: 650; }
+.category.selected { color: #fff; border-color: #376043; background: #376043; }
+.ingredient-label { margin-top: 4px; }
+input { width: 100%; min-height: 54px; border: 2px solid #dfe6de; border-radius: 14px; padding: 0 14px; background: #fff; outline-color: #376043; }
+.show-results { width: 100%; min-height: 56px; margin-top: 20px; border: 0; border-radius: 16px; background: #376043; color: #fff; font-weight: 750; }
+.show-results:disabled { background: #b8c2b8; cursor: default; }
+.helper { color: #667067; font-size: .88rem; line-height: 1.45; }
+.result-summary { color: #586259; margin: -10px 0 18px; }
+.recipe-list { display: grid; gap: 12px; }
+.recipe { display: block; padding: 17px; border: 1px solid #e1e6df; border-radius: 18px; color: inherit; text-decoration: none; background: #fff; }
+.recipe:active { background: #f5f8f4; }
+.recipe h2 { font-size: 1.04rem; line-height: 1.3; margin: 0 0 10px; }
+.recipe-meta { display: flex; flex-wrap: wrap; gap: 8px; color: #586259; font-size: .84rem; }
+.tag { padding: 4px 8px; border-radius: 999px; background: #e9f0e8; color: #34523a; }
+.status { margin-top: 12px; font-size: .8rem; color: #895d19; }
+.empty { padding: 28px 12px; text-align: center; color: #586259; }
+@media (min-width: 430px) { .screen { padding-left: 24px; padding-right: 24px; } }
+@media (max-height: 700px) { .screen--people { gap: 12px; } .person-card { border-radius: 20px; } .person-name { padding: 12px 16px; } }
