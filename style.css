@@ -11,7 +11,7 @@ button, input { font: inherit; }
 button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .app { width: min(100%, 480px); min-height: 100dvh; margin: 0 auto; background: #fffdf9; }
 .screen { min-height: 100dvh; padding: max(18px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom)); }
-.hidden { display: none; }
+.screen.hidden { display: none; }
 
 .screen--people { display: grid; grid-template-rows: 1fr 1fr; gap: 16px; }
 .person-card { min-height: 0; border: 0; border-radius: 26px; overflow: hidden; display: grid; grid-template-rows: 1fr auto; padding: 0; text-align: left; box-shadow: 0 6px 20px #27322217; transition: transform .15s, box-shadow .15s; }
