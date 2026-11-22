@@ -73,7 +73,7 @@ function evaluateRecipeFor(person, recipe, products) {
     const gluten = recipe.ingredients.filter((ingredient) =>
       hasTerm(ingredient, glutenTerms) && !foldText(ingredient).includes("bezgluten")
     );
-    return gluten.length ? { visible: false, reasons: [`gluten: ${gluten.join(", ")}`] } : { visible: true, warnings: [] };
+    return gluten.length ? { visible: false, canOverride: false, reasons: [`gluten: ${gluten.join(", ")}`] } : { visible: true, canOverride: false, warnings: [] };
   }
 
   const blocked = [];
@@ -102,21 +102,26 @@ function evaluateRecipeFor(person, recipe, products) {
     if (symbols.includes("H!")) warnings.push(`${ingredient} — H! użyj bardzo świeżego i spożyj od razu`);
     if (symbols.includes("?")) warnings.push(`${ingredient} — ?`);
   });
-  if (blocked.length) return { visible: false, reasons: blocked };
-  if (unknown.length) return { visible: false, reasons: unknown.map((item) => `${item} — brak potwierdzenia w bazie`) };
+  if (blocked.length) return { visible: false, canOverride: false, reasons: blocked };
+  if (unknown.length) return { visible: false, canOverride: true, reasons: unknown.map((item) => `${item} — brak potwierdzenia w bazie`) };
   const strongestRating = ["1", "?", "0"].find((rating) => ratings.includes(rating));
-  return { visible: true, warnings, ratingLabel: strongestRating ? ratingLabels[strongestRating] : "BRAK DANYCH" };
+  return { visible: true, canOverride: false, warnings, ratingLabel: strongestRating ? ratingLabels[strongestRating] : "BRAK DANYCH" };
+}
+
+const reviewLabels = { approved: "Dopuszczony przez rodzinę", excluded: "Wykluczony przez rodzinę", check: "Wymaga sprawdzenia przez rodzinę" };
+function reviewControls(recipeId, canApprove = true) {
+  if (!["admin", "reviewer"].includes(state.role)) return "";
+  return `<div class="review-actions">
+    ${canApprove ? `<button type="button" data-review="approved" data-recipe-id="${recipeId}">Dopuść</button>` : ""}
+    <button type="button" data-review="check" data-recipe-id="${recipeId}">Sprawdź</button>
+    <button type="button" data-review="excluded" data-recipe-id="${recipeId}">Wyklucz</button>
+  </div>`;
 }
 
 function recipeCard(recipe, evaluation, review) {
   const ingredients = recipe.ingredients.map((item) => `<li>${item}</li>`).join("");
   const time = recipe.timeMinutes ? `<span>${recipe.timeMinutes} min</span>` : "";
-  const reviewLabels = { approved: "Dopuszczony przez rodzinę", excluded: "Wykluczony przez rodzinę", check: "Wymaga sprawdzenia przez rodzinę" };
-  const controls = ["admin", "reviewer"].includes(state.role) ? `<div class="review-actions">
-    <button type="button" data-review="approved" data-recipe-id="${recipe.id}">Dopuść</button>
-    <button type="button" data-review="check" data-recipe-id="${recipe.id}">Sprawdź</button>
-    <button type="button" data-review="excluded" data-recipe-id="${recipe.id}">Wyklucz</button>
-  </div>` : "";
+  const controls = reviewControls(recipe.id);
   return `<article class="recipe-card">
     <div class="recipe-card__top"><h2>${recipe.title}</h2>${time}</div>
     <p class="review">Wymaga weryfikacji diety</p>
@@ -128,6 +133,12 @@ function recipeCard(recipe, evaluation, review) {
     <p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${recipe.publisher}</a></p>
     ${controls}
   </article>`;
+}
+
+function reviewQueue(items) {
+  if (!["admin", "reviewer"].includes(state.role) || !items.length) return "";
+  const cards = items.map(({ recipe, evaluation }) => `<li><b>${recipe.title}</b><br>${evaluation.reasons.join("; ")}${reviewControls(recipe.id, evaluation.canOverride)}</li>`).join("");
+  return `<details class="admin-diagnostics"><summary>Przepisy wymagające oceny (${items.length})</summary><ul>${cards}</ul></details>`;
 }
 
 async function getRecipeReviews() {
@@ -150,7 +161,10 @@ async function searchRecipes() {
     const evaluated = found.map((recipe) => {
       const evaluation = evaluateRecipeFor(state.person, recipe, products);
       const review = reviews[recipe.id];
-      if (review?.status === "excluded") return { recipe, evaluation: { visible: false, reasons: ["wykluczony decyzją rodziny"] }, review };
+      if (review?.status === "excluded") return { recipe, evaluation: { visible: false, canOverride: false, reasons: ["wykluczony decyzją rodziny"] }, review };
+      if (review?.status === "approved" && evaluation.canOverride) {
+        return { recipe, evaluation: { ...evaluation, visible: true, warnings: [...(evaluation.warnings || []), "dopuszczony decyzją rodziny"], ratingLabel: "DOPUSZCZONY" }, review };
+      }
       return { recipe, evaluation, review };
     });
     const recipes = evaluated.filter((item) => item.evaluation.visible).sort((left, right) => left.recipe.title.localeCompare(right.recipe.title, "pl"));
@@ -160,10 +174,9 @@ async function searchRecipes() {
         : "W tej kategorii nie ma jeszcze przepisów testowych.";
       if (state.person === "emilka" && found.length) {
         const message = `Nie pokazano ${found.length} przepisów: zawierają produkt z oceną „NIEZGODNE” lub „BARDZO ŹLE”, gluten, kazeinę albo składnik bez bezpośredniego potwierdzenia w bazie Histamina.`;
-        if (state.role === "admin") {
-          const details = evaluated.map(({ recipe, evaluation }) => `<li><b>${recipe.title}</b><br>${evaluation.reasons.join("; ")}</li>`).join("");
+        if (["admin", "reviewer"].includes(state.role)) {
           list.className = "recipe-list";
-          list.innerHTML = `<p class="filter-note">${message}</p><details class="admin-diagnostics"><summary>Dlaczego ukryto przepisy? (tylko administrator)</summary><ul>${details}</ul></details>`;
+          list.innerHTML = `<p class="filter-note">${message}</p>${reviewQueue(evaluated)}`;
         } else {
           list.className = "empty";
           list.textContent = message;
@@ -176,7 +189,8 @@ async function searchRecipes() {
     }
     list.className = "recipe-list";
     const excluded = evaluated.length - recipes.length;
-    list.innerHTML = `${state.person === "emilka" && excluded ? `<p class="filter-note">Ukryto ${excluded} przepisów niespełniających zasad Emilki.</p>` : ""}${recipes.map((item) => recipeCard(item.recipe, item.evaluation, item.review)).join("")}`;
+    const reviewItems = evaluated.filter((item) => !item.evaluation.visible);
+    list.innerHTML = `${state.person === "emilka" && excluded ? `<p class="filter-note">Ukryto ${excluded} przepisów niespełniających zasad Emilki.</p>` : ""}${recipes.map((item) => recipeCard(item.recipe, item.evaluation, item.review)).join("")}${reviewQueue(reviewItems)}`;
   } catch {
     list.className = "empty";
     list.textContent = "Nie udało się pobrać prywatnej bazy. Spróbuj ponownie.";
