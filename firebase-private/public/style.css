@@ -17,11 +17,10 @@ h1 { margin: 0; font-size: 1.5rem; }
 .people-screen { display: grid; align-content: start; gap: 15px; }
 .account { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; color: #52655c; font-size: .82rem; }
 .account button { border: 0; background: none; color: #286244; text-decoration: underline; }
-.person-card { border: 1px solid #d9e5de; border-radius: 18px; overflow: hidden; display: grid; grid-template-rows: auto auto; padding: 0; text-align: left; background: #fffdf8; color: #17352c; }
+.person-card { border: 1px solid #d9e5de; border-radius: 18px; overflow: hidden; display: grid; padding: 0; text-align: left; background: #fffdf8; color: #17352c; }
 .person-card:active { border-color: #286244; background: #dff1e5; }
 .portrait { display: grid; place-items: center; aspect-ratio: 1 / 1; text-align: center; background: #e7f0e9; color: #697b73; line-height: 1.45; font-size: .9rem; background-position: center; background-repeat: no-repeat; background-size: contain; }
 .portrait.has-image { color: transparent; }
-.person-name { padding: 16px; font-size: 1.25rem; font-weight: 500; }
 .portrait-admin { display: grid; gap: 10px; margin-top: 6px; padding: 16px; border: 1px solid #d9e5de; border-radius: 16px; background: #f8fbf8; }
 .portrait-admin p { margin: 0; }
 .secondary { display: block; border: 1px solid #286244; border-radius: 12px; padding: 11px 14px; color: #286244; font-weight: 650; text-align: center; cursor: pointer; }
