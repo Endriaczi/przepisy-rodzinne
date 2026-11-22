@@ -267,19 +267,21 @@ document.getElementById("recipe-list").addEventListener("click", async (event) =
 document.getElementById("seed-recipes").addEventListener("click", async () => {
   const message = document.getElementById("portrait-message");
   if (state.role !== "admin") return;
-  message.textContent = "Sprawdzam bazę testową…";
+  message.textContent = "Sprawdzam prywatną bazę przepisów…";
   try {
     const existing = await getDocs(query(collection(db, "recipes")));
-    if (!existing.empty) {
-      message.textContent = "Baza przepisów jest już wczytana.";
+    const existingIds = new Set(existing.docs.map((recipe) => recipe.id));
+    const missingRecipes = recipeSeed.filter((recipe) => !existingIds.has(recipe.id));
+    if (!missingRecipes.length) {
+      message.textContent = "Masz już aktualną pulę kandydatów do oceny.";
       return;
     }
     const batch = writeBatch(db);
-    recipeSeed.forEach((recipe) => batch.set(doc(db, "recipes", recipe.id), recipe));
+    missingRecipes.forEach((recipe) => batch.set(doc(db, "recipes", recipe.id), recipe));
     await batch.commit();
-    message.textContent = "Dodano 8 przepisów testowych do prywatnej bazy.";
+    message.textContent = `Dodano ${missingRecipes.length} nowych kandydatów do prywatnej bazy.`;
   } catch {
-    message.textContent = "Nie udało się dodać bazy testowej. Spróbuj ponownie.";
+    message.textContent = "Nie udało się uzupełnić bazy. Spróbuj ponownie.";
   }
 });
 document.getElementById("import-histamine").addEventListener("click", async () => {

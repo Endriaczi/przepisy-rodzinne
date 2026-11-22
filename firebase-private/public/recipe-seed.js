@@ -78,5 +78,145 @@ export const recipeSeed = [
     sourceClaims: ["low histamine"],
     ingredients: ["cały kurczak", "sól", "tymianek", "rozmaryn", "szałwia", "masło", "czosnek", "cebula", "bulion z kurczaka"],
     dietReview: "do_sprawdzenia", note: "Masło wymaga eliminacji dla Emilki ze względu na kazeinę."
+  },
+  {
+    id: "histfood-flaxseed-porridge",
+    title: "Owsianka lniana z jabłkiem i owocami",
+    category: "sniadanie",
+    publisher: "HistaFood",
+    sourceUrl: "https://histafood.eu/en/blogs/rezepte/leinsamen-porridge-bowl",
+    sourceClaims: ["low histamine", "gluten-free", "lactose-free", "vegan"], timeMinutes: 10,
+    ingredients: ["certyfikowane płatki owsiane bezglutenowe", "siemię lniane", "mus jabłkowy", "nasiona chia", "brzoskwinie", "wiśnie", "sól", "woda"],
+    dietReview: "do_sprawdzenia", note: "Owoce i dodatki wymagają sprawdzenia według indywidualnej tolerancji Emilki."
+  },
+  {
+    id: "histfood-apple-carrot-muffins",
+    title: "Muffinki jabłkowo-marchewkowe",
+    category: "sniadanie",
+    publisher: "HistaFood",
+    sourceUrl: "https://histafood.eu/en/blogs/rezepte/apfel-karotten-fruhstucksmuffins",
+    sourceClaims: ["low histamine", "gluten-free", "lactose-free", "vegan"], timeMinutes: 40,
+    ingredients: ["marchew", "jabłka", "mąka owsiana bezglutenowa", "cukier kokosowy", "proszek do pieczenia", "sól", "cynamon", "mus jabłkowy", "olej rzepakowy", "mleko owsiane bezglutenowe"],
+    dietReview: "do_sprawdzenia", note: "Sprawdź certyfikację bezglutenową mąki i mleka owsianego."
+  },
+  {
+    id: "histfood-rice-cake-breakfast",
+    title: "Śniadanie z waflami ryżowymi",
+    category: "sniadanie",
+    publisher: "HistaFood",
+    sourceUrl: "https://histafood.eu/en/blogs/rezepte/reiswaffel-fruehstueck",
+    sourceClaims: ["low histamine", "gluten-free", "lactose-free"], timeMinutes: 5,
+    ingredients: ["wafle ryżowe", "żółtka jaj", "bezglutenowy serek owsiany", "syrop kokosowy", "tahini", "rzeżucha", "oliwa", "sól"],
+    dietReview: "do_sprawdzenia", note: "Sprawdź skład serka owsianego i tahini."
+  },
+  {
+    id: "histfood-chia-pudding",
+    title: "Pudding chia z borówkami",
+    category: "sniadanie",
+    publisher: "HistaFood",
+    sourceUrl: "https://histafood.eu/en/blogs/rezepte/chia-pudding",
+    sourceClaims: ["low histamine", "gluten-free", "lactose-free", "vegan"], timeMinutes: 15,
+    ingredients: ["nasiona chia", "daktyle", "borówki", "mleko kokosowe", "jogurt kokosowy", "pistacje"],
+    dietReview: "do_sprawdzenia", note: "Składniki oznaczone jako indywidualna tolerancja wymagają rodzinnej oceny."
+  },
+  {
+    id: "histfood-semolina-blueberry",
+    title: "Ryżowy pudding z sosem borówkowym",
+    category: "sniadanie",
+    publisher: "HistaFood",
+    sourceUrl: "https://histafood.eu/en/blogs/rezepte/griessbrei-mit-blaubeersosse",
+    sourceClaims: ["low histamine", "gluten-free", "lactose-free", "vegan"], timeMinutes: 20,
+    ingredients: ["mleko owsiane bezglutenowe", "kasza manna ryżowa", "syrop klonowy", "borówki", "wanilia"],
+    dietReview: "do_sprawdzenia", note: "Sprawdź certyfikację bezglutenową mleka owsianego."
+  },
+  {
+    id: "histfood-chicken-nuggets",
+    title: "Nuggetsy z kurczaka",
+    category: "obiad",
+    publisher: "HistaFood",
+    sourceUrl: "https://histafood.eu/en/blogs/rezepte/chicken-nuggets",
+    sourceClaims: ["low histamine", "gluten-free", "lactose-free"], timeMinutes: 25,
+    ingredients: ["pierś z kurczaka", "ziemniak", "cebula", "sól", "skrobia ziemniaczana lub kukurydziana", "jogurt bez laktozy"],
+    dietReview: "do_sprawdzenia", note: "Dla Emilki użyj świeżo kupionego kurczaka i zamiennika jogurtu bez kazeiny."
+  },
+  {
+    id: "histfood-baked-noodles",
+    title: "Pieczony makaron ryżowy z warzywami",
+    category: "obiad",
+    publisher: "HistaFood",
+    sourceUrl: "https://histafood.eu/en/blogs/rezepte/baked-noodles",
+    sourceClaims: ["low histamine", "gluten-free", "lactose-free", "vegan"], timeMinutes: 30,
+    ingredients: ["mleko kokosowe", "makaron ryżowy", "pak choi", "marchew", "imbir", "czosnek", "cebula", "sezam", "sól", "sos azjatycki"],
+    dietReview: "do_sprawdzenia", note: "Gotowy sos azjatycki wymaga dokładnego sprawdzenia składu."
+  },
+  {
+    id: "histfood-vegetable-stirfry",
+    title: "Kolorowa patelnia warzywna z ziemniakami",
+    category: "obiad",
+    publisher: "HistaFood",
+    sourceUrl: "https://histafood.eu/en/blogs/rezepte/bunte-gemuesepfanne",
+    sourceClaims: ["low histamine", "gluten-free", "lactose-free", "vegan"], timeMinutes: 20,
+    ingredients: ["ziemniaki", "marchew", "cukinia", "cebula", "kapusta stożkowa", "kminek", "sól", "oliwa", "pietruszka"],
+    dietReview: "do_sprawdzenia", note: "Przyprawy i cebula wymagają sprawdzenia według tolerancji."
+  },
+  {
+    id: "histfood-vegan-ramen",
+    title: "Wegański ramen ryżowy z warzywami",
+    category: "obiad",
+    publisher: "HistaFood",
+    sourceUrl: "https://histafood.eu/en/blogs/rezepte/vegane-ramen",
+    sourceClaims: ["low histamine", "gluten-free", "lactose-free", "vegan"], timeMinutes: 10,
+    ingredients: ["makaron ryżowy", "bulion warzywny", "marchew", "cukinia", "dymka", "kolendra"],
+    dietReview: "do_sprawdzenia", note: "Bulion warzywny wymaga sprawdzenia pełnego składu."
+  },
+  {
+    id: "histfood-vegan-cabbage-rolls",
+    title: "Gołąbki z kapusty pekińskiej i ryżu",
+    category: "obiad",
+    publisher: "HistaFood",
+    sourceUrl: "https://histafood.eu/en/blogs/rezepte/vegane-kohlrouladen",
+    sourceClaims: ["low histamine", "gluten-free", "lactose-free", "vegan"], timeMinutes: 50,
+    ingredients: ["kapusta pekińska", "marchew", "dymka", "czosnek", "ryż basmati", "oliwa", "sezam", "sos azjatycki"],
+    dietReview: "do_sprawdzenia", note: "Sos azjatycki oraz sezam wymagają sprawdzenia."
+  },
+  {
+    id: "histfood-rice-vegetable-patties",
+    title: "Chrupiące kotleciki ryżowo-warzywne",
+    category: "obiad",
+    publisher: "HistaFood",
+    sourceUrl: "https://histafood.eu/en/blogs/rezepte/gemuese-reis-patties",
+    sourceClaims: ["low histamine", "gluten-free", "lactose-free", "vegan"], timeMinutes: 30,
+    ingredients: ["ryż", "pieczarki", "dymka", "pietruszka", "bazylia", "skrobia", "mąka lniana", "kurkuma", "oliwa", "tahini"],
+    dietReview: "do_sprawdzenia", note: "Pieczarki, tahini i dodatki do dipu wymagają oceny."
+  },
+  {
+    id: "histfood-mini-wraps",
+    title: "Bezglutenowe mini placki owsiane",
+    category: "kolacja_przekaska",
+    publisher: "HistaFood",
+    sourceUrl: "https://histafood.eu/en/blogs/rezepte/glutenfreie-mini-wrap-brote",
+    sourceClaims: ["low histamine", "gluten-free", "lactose-free", "vegan"], timeMinutes: 15,
+    ingredients: ["płatki owsiane bezglutenowe", "siemię lniane", "czarnuszka", "woda", "sól", "tahini", "jogurt kokosowy"],
+    dietReview: "do_sprawdzenia", note: "Wybierz dip bez kazeiny; sprawdź czarnuszkę i tahini."
+  },
+  {
+    id: "histfood-pudding-coconut-bites",
+    title: "Kokosowe kostki puddingowe",
+    category: "kolacja_przekaska",
+    publisher: "HistaFood",
+    sourceUrl: "https://histafood.eu/en/blogs/rezepte/pudding-kokos-bites",
+    sourceClaims: ["low histamine", "gluten-free", "lactose-free", "vegan"], timeMinutes: 130,
+    ingredients: ["mleko owsiane bezglutenowe", "skrobia", "cukier", "wiórki kokosowe"],
+    dietReview: "do_sprawdzenia", note: "Sprawdź certyfikację bezglutenową mleka owsianego."
+  },
+  {
+    id: "histfood-glutenfree-rolls",
+    title: "Bezglutenowe bułeczki z ziarnami",
+    category: "kolacja_przekaska",
+    publisher: "HistaFood",
+    sourceUrl: "https://histafood.eu/en/blogs/rezepte/glutenfreie-kornerbrotchen",
+    sourceClaims: ["low histamine", "gluten-free", "lactose-free", "vegan"], timeMinutes: 60,
+    ingredients: ["mąka ryżowa", "mąka owsiana bezglutenowa", "proszek do pieczenia", "soda", "babka płesznik", "ocet jabłkowy", "siemię lniane", "sól", "pestki dyni"],
+    dietReview: "do_sprawdzenia", note: "Ocet jabłkowy wymaga osobnej oceny dla Emilki."
   }
 ];
