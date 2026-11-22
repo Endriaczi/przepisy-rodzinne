@@ -44,13 +44,21 @@ function hasCasein(ingredient) {
   return caseinTerms.some((term) => value.includes(term));
 }
 
-function productMatchesIngredient(product, ingredient) {
-  const ingredientWords = words(ingredient).filter((word) => word.length >= 3);
-  if (!ingredientWords.length) return false;
-  const productWords = words(product.polishName);
-  return ingredientWords.some((word) => productWords.some((candidate) =>
-    word === candidate || (word.length >= 5 && candidate.length >= 5 && (word.startsWith(candidate) || candidate.startsWith(word)))
-  ));
+function bestProductMatches(products, ingredient) {
+  const ingredientWords = [...new Set(words(ingredient).filter((word) => word.length >= 3))];
+  if (!ingredientWords.length) return [];
+  const candidates = products.map((product) => {
+    const productWords = [...new Set(words(product.polishName).filter((word) => word.length >= 3))];
+    const matchCount = ingredientWords.filter((word) => productWords.some((candidate) =>
+      word === candidate || (word.length >= 5 && candidate.length >= 5 && (word.startsWith(candidate) || candidate.startsWith(word)))
+    )).length;
+    return { product, matchCount, coverage: productWords.length ? matchCount / productWords.length : 0 };
+  }).filter((candidate) => candidate.matchCount > 0);
+  if (!candidates.length) return [];
+  const bestMatchCount = Math.max(...candidates.map((candidate) => candidate.matchCount));
+  const byMatchCount = candidates.filter((candidate) => candidate.matchCount === bestMatchCount);
+  const bestCoverage = Math.max(...byMatchCount.map((candidate) => candidate.coverage));
+  return byMatchCount.filter((candidate) => candidate.coverage === bestCoverage).map((candidate) => candidate.product);
 }
 
 async function getHistamineProducts() {
@@ -76,7 +84,7 @@ function evaluateRecipeFor(person, recipe, products) {
     if (isPlainSalt(ingredient)) return; // Zasada rodziny: sól oznacza sól niejodowaną.
     if (hasTerm(ingredient, glutenTerms) && !foldText(ingredient).includes("bezgluten")) blocked.push(`${ingredient} — gluten`);
     if (hasCasein(ingredient)) blocked.push(`${ingredient} — kazeina`);
-    const matches = products.filter((product) => productMatchesIngredient(product, ingredient));
+    const matches = bestProductMatches(products, ingredient);
     if (!matches.length) {
       unknown.push(ingredient);
       return;
