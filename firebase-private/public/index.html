@@ -65,10 +65,14 @@
         <h3>Wszystkie składniki</h3>
         <ul id="review-dialog-ingredients" class="review-dialog-ingredients"></ul>
         <p class="review-dialog-key"><span></span> Składnik wymagający sprawdzenia</p>
-        <p class="recipe-note">To nie jest automatyczne wykluczenie. Po sprawdzeniu możesz wrócić do listy i wybrać „Dopuść” albo „Wyklucz”.</p>
-        <button id="review-dialog-close" class="primary" type="button">Rozumiem</button>
+        <p class="recipe-note">Możesz podjąć decyzję teraz albo wrócić później — wtedy nic nie zostanie zapisane.</p>
+        <div id="review-dialog-actions" class="dialog-actions">
+          <button data-dialog-review="approved" class="primary" type="button">Dopuszczam</button>
+          <button data-dialog-review="excluded" class="danger" type="button">Blokuję</button>
+          <button id="review-dialog-later" class="secondary" type="button">Wróć</button>
+        </div>
       </article>
     </dialog>
-    <script type="module" src="app.js?v=20261122-review-ingredients"></script>
+    <script type="module" src="app.js?v=20261122-review-decisions"></script>
   </body>
 </html>

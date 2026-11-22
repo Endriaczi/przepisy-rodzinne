@@ -65,6 +65,9 @@ input { width: 100%; min-height: 54px; border: 2px solid #b8dfdf; border-radius:
 .review-dialog-ingredients .is-questionable { color: #8a5300; font-weight: 800; }
 .review-dialog-key { margin: 12px 0; font-size: .85rem; }
 .review-dialog-key span { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #d79000; }
+.dialog-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 18px; }
+.dialog-actions .secondary { grid-column: 1 / -1; background: transparent; }
+.danger { min-height: 54px; border: 1px solid #b65656; border-radius: 15px; background: #fff5f4; color: #8b3030; font-weight: 750; }
 
 @media (prefers-color-scheme: dark) {
   :root { background: #062a30; color: #e6fbfa; }
@@ -94,4 +97,5 @@ input { width: 100%; min-height: 54px; border: 2px solid #b8dfdf; border-radius:
   .admin-diagnostics { border-color: #27757b; color: #b9d9d8; }
   .review-dialog { background: #0d363c; border-color: #27757b; color: #e6fbfa; }
   .review-dialog-ingredients .is-questionable { color: #ffd475; }
+  .danger { border-color: #d67d7d; background: #4e2528; color: #ffd5d5; }
 }

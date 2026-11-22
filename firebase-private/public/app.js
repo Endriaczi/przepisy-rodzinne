@@ -132,6 +132,7 @@ const reviewLabels = { approved: "Dopuszczony przez rodzinę", excluded: "Wykluc
 function reviewControls(recipeId, canApprove = true, reasons = [], ingredients = []) {
   if (!["admin", "reviewer"].includes(state.role)) return "";
   const encodedDetails = encodeURIComponent(JSON.stringify({
+    recipeId,
     reasons: reasons.length ? reasons : ["Ten przepis wymaga sprawdzenia przez rodzinę."],
     ingredients
   }));
@@ -273,9 +274,27 @@ document.getElementById("login-button").addEventListener("click", async () => {
 });
 
 document.getElementById("logout-button").addEventListener("click", () => signOut(auth));
+function openReviewDialog(details) {
+  const reasons = details.reasons || ["Ten przepis wymaga sprawdzenia przez rodzinę."];
+  document.getElementById("review-dialog-reasons").textContent = reasons.join("; ");
+  const ingredientsList = document.getElementById("review-dialog-ingredients");
+  ingredientsList.replaceChildren(...(details.ingredients || []).map((ingredient) => {
+    const item = document.createElement("li");
+    item.textContent = ingredient;
+    if (reasons.some((reason) => reason.startsWith(`${ingredient} —`))) item.classList.add("is-questionable");
+    return item;
+  }));
+  document.getElementById("review-dialog").dataset.recipeId = details.recipeId || "";
+  document.getElementById("review-dialog").showModal();
+}
+
 document.getElementById("recipe-list").addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-review]");
   if (!button || !["admin", "reviewer"].includes(state.role)) return;
+  if (button.dataset.review === "check") {
+    openReviewDialog(JSON.parse(decodeURIComponent(button.dataset.reviewDetails || "{}")));
+    return;
+  }
   button.disabled = true;
   try {
     await setDoc(doc(db, "recipeReviews", button.dataset.recipeId), {
@@ -283,25 +302,31 @@ document.getElementById("recipe-list").addEventListener("click", async (event) =
       reviewedBy: state.user.email,
       reviewedAt: serverTimestamp()
     });
-    if (button.dataset.review === "check") {
-      const details = JSON.parse(decodeURIComponent(button.dataset.reviewDetails || "{}"));
-      const reasons = details.reasons || ["Ten przepis wymaga sprawdzenia przez rodzinę."];
-      document.getElementById("review-dialog-reasons").textContent = reasons.join("; ");
-      const reasonsList = document.getElementById("review-dialog-ingredients");
-      reasonsList.replaceChildren(...(details.ingredients || []).map((ingredient) => {
-        const item = document.createElement("li");
-        item.textContent = ingredient;
-        if (reasons.some((reason) => reason.startsWith(`${ingredient} —`))) item.classList.add("is-questionable");
-        return item;
-      }));
-      document.getElementById("review-dialog").showModal();
-    }
     await searchRecipes();
   } finally {
     button.disabled = false;
   }
 });
-document.getElementById("review-dialog-close").addEventListener("click", () => document.getElementById("review-dialog").close());
+document.getElementById("review-dialog-later").addEventListener("click", () => document.getElementById("review-dialog").close());
+document.getElementById("review-dialog-actions").addEventListener("click", async (event) => {
+  const button = event.target.closest("button[data-dialog-review]");
+  if (!button) return;
+  const dialog = document.getElementById("review-dialog");
+  const recipeId = dialog.dataset.recipeId;
+  if (!recipeId) return;
+  button.disabled = true;
+  try {
+    await setDoc(doc(db, "recipeReviews", recipeId), {
+      status: button.dataset.dialogReview,
+      reviewedBy: state.user.email,
+      reviewedAt: serverTimestamp()
+    });
+    dialog.close();
+    await searchRecipes();
+  } finally {
+    button.disabled = false;
+  }
+});
 document.getElementById("seed-recipes").addEventListener("click", async () => {
   const message = document.getElementById("portrait-message");
   if (state.role !== "admin") return;
