@@ -9,20 +9,93 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-const state = { person: null, category: null, user: null, role: null };
+const state = { person: null, category: null, user: null, role: null, histamineProducts: null };
 const labels = { emilka: "Emilka", kasia: "Kasia", sniadanie: "Śniadanie", obiad: "Obiad", kolacja_przekaska: "Kolacja / Przekąska" };
 const histamineSourceUrl = "https://raw.githubusercontent.com/Endriaczi/Histamina/main/script0.js";
 
 const show = (screen) => document.querySelectorAll(".screen").forEach((item) => item.classList.toggle("hidden", item.id !== `${screen}-screen`));
 const setLoginMessage = (text) => { document.getElementById("login-message").textContent = text; };
 const normalize = (text) => text.toLocaleLowerCase("pl-PL").trim();
+const foldText = (text) => (text || "").toLowerCase().normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "").replace(/ł/g, "l").replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+const eggWords = ["jajko", "jajka", "jaja", "jajo", "jajek", "jajkiem", "jajem"];
+const glutenTerms = ["gluten", "pszen", "zyt", "jeczm", "orkisz", "bulgur", "kuskus", "semolina"];
+const caseinTerms = ["mleko", "maslo", "jogurt", "ser", "smiet", "twarog", "ricotta", "mascarpone", "kefir", "serwatka"];
+const saltTerms = ["sol", "sol morska", "salt"];
 
-function recipeCard(recipe) {
+function words(text) {
+  return foldText(text).split(" ").filter(Boolean).map((word) => eggWords.includes(word) ? "jajko" : word);
+}
+
+function hasTerm(ingredient, terms) {
+  const value = foldText(ingredient);
+  return terms.some((term) => value.includes(term));
+}
+
+function isPlainSalt(ingredient) {
+  const value = foldText(ingredient);
+  return saltTerms.some((term) => value === term || value.startsWith(`${term} `));
+}
+
+function hasCasein(ingredient) {
+  const value = foldText(ingredient);
+  if (value.includes("maslo") && (value.includes("nerkow") || value.includes("orzech"))) return false;
+  return caseinTerms.some((term) => value.includes(term));
+}
+
+function productMatchesIngredient(product, ingredient) {
+  const ingredientWords = words(ingredient).filter((word) => word.length >= 3);
+  if (!ingredientWords.length) return false;
+  const productWords = words(product.polishName);
+  return ingredientWords.some((word) => productWords.some((candidate) =>
+    word === candidate || (word.length >= 5 && candidate.length >= 5 && (word.startsWith(candidate) || candidate.startsWith(word)))
+  ));
+}
+
+async function getHistamineProducts() {
+  if (state.histamineProducts) return state.histamineProducts;
+  const snapshot = await getDocs(collection(db, "histamineProducts"));
+  state.histamineProducts = snapshot.docs.map((item) => item.data());
+  return state.histamineProducts;
+}
+
+function evaluateRecipeFor(person, recipe, products) {
+  if (person === "kasia") {
+    const gluten = recipe.ingredients.filter((ingredient) =>
+      hasTerm(ingredient, glutenTerms) && !foldText(ingredient).includes("bezgluten")
+    );
+    return gluten.length ? { visible: false, reasons: [`gluten: ${gluten.join(", ")}`] } : { visible: true, warnings: [] };
+  }
+
+  const blocked = [];
+  const warnings = [];
+  const unknown = [];
+  recipe.ingredients.forEach((ingredient) => {
+    if (isPlainSalt(ingredient)) return; // Zasada rodziny: sól oznacza sól niejodowaną.
+    if (hasTerm(ingredient, glutenTerms) && !foldText(ingredient).includes("bezgluten")) blocked.push(`${ingredient} — gluten`);
+    if (hasCasein(ingredient)) blocked.push(`${ingredient} — kazeina`);
+    const matches = products.filter((product) => productMatchesIngredient(product, ingredient));
+    if (!matches.length) {
+      unknown.push(ingredient);
+      return;
+    }
+    const symbols = matches.flatMap((product) => Object.values(product.symbols || {}));
+    const hardSymbols = symbols.filter((symbol) => symbol && symbol !== "?");
+    if (hardSymbols.length) blocked.push(`${ingredient} — ${[...new Set(hardSymbols)].join(", ")}`);
+    else if (symbols.includes("?")) warnings.push(`${ingredient} — ?`);
+  });
+  if (blocked.length) return { visible: false, reasons: blocked };
+  if (unknown.length) return { visible: false, reasons: unknown.map((item) => `${item} — brak potwierdzenia w bazie`) };
+  return { visible: true, warnings };
+}
+
+function recipeCard(recipe, evaluation) {
   const ingredients = recipe.ingredients.map((item) => `<li>${item}</li>`).join("");
   const time = recipe.timeMinutes ? `<span>${recipe.timeMinutes} min</span>` : "";
   return `<article class="recipe-card">
     <div class="recipe-card__top"><h2>${recipe.title}</h2>${time}</div>
     <p class="review">Wymaga weryfikacji diety</p>
+    ${evaluation.warnings?.length ? `<p class="review review--warning">Dopuszczone warunkowo: ${evaluation.warnings.join("; ")}</p>` : ""}
     <p class="recipe-note">${recipe.note || "Sprawdź składniki przed przygotowaniem."}</p>
     <details><summary>Składniki</summary><ul>${ingredients}</ul></details>
     <p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${recipe.publisher}</a></p>
@@ -36,18 +109,25 @@ async function searchRecipes() {
   try {
     const snapshot = await getDocs(query(collection(db, "recipes"), where("category", "==", state.category)));
     const phrase = normalize(document.getElementById("ingredient").value);
-    const recipes = snapshot.docs.map((item) => item.data()).filter((recipe) =>
+    const found = snapshot.docs.map((item) => item.data()).filter((recipe) =>
       !phrase || recipe.ingredients.some((ingredient) => normalize(ingredient).includes(phrase))
-    ).sort((left, right) => left.title.localeCompare(right.title, "pl"));
+    );
+    const products = state.person === "emilka" ? await getHistamineProducts() : [];
+    const evaluated = found.map((recipe) => ({ recipe, evaluation: evaluateRecipeFor(state.person, recipe, products) }));
+    const recipes = evaluated.filter((item) => item.evaluation.visible).sort((left, right) => left.recipe.title.localeCompare(right.recipe.title, "pl"));
     if (!recipes.length) {
       list.className = "empty";
-      list.textContent = phrase
+      const baseMessage = phrase
         ? "Nie znaleziono przepisu z tym składnikiem w tej kategorii."
         : "W tej kategorii nie ma jeszcze przepisów testowych.";
+      list.textContent = state.person === "emilka" && found.length
+        ? `Nie pokazano ${found.length} przepisów: zawierają H/A/L/B, gluten, kazeinę lub składnik bez potwierdzenia w bazie Histamina.`
+        : baseMessage;
       return;
     }
     list.className = "recipe-list";
-    list.innerHTML = recipes.map(recipeCard).join("");
+    const excluded = evaluated.length - recipes.length;
+    list.innerHTML = `${state.person === "emilka" && excluded ? `<p class="filter-note">Ukryto ${excluded} przepisów niespełniających zasad Emilki.</p>` : ""}${recipes.map((item) => recipeCard(item.recipe, item.evaluation)).join("")}`;
   } catch {
     list.className = "empty";
     list.textContent = "Nie udało się pobrać prywatnej bazy. Spróbuj ponownie.";
