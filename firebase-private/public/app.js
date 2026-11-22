@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-import { getFirestore, collection, doc, getDoc, getDocs, query, where, limit, writeBatch } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+import { getFirestore, collection, doc, getDoc, getDocs, query, where, limit, writeBatch, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { getStorage, ref, getDownloadURL, uploadBytes } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-storage.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { recipeSeed } from "./recipe-seed.js";
@@ -108,18 +108,31 @@ function evaluateRecipeFor(person, recipe, products) {
   return { visible: true, warnings, ratingLabel: strongestRating ? ratingLabels[strongestRating] : "BRAK DANYCH" };
 }
 
-function recipeCard(recipe, evaluation) {
+function recipeCard(recipe, evaluation, review) {
   const ingredients = recipe.ingredients.map((item) => `<li>${item}</li>`).join("");
   const time = recipe.timeMinutes ? `<span>${recipe.timeMinutes} min</span>` : "";
+  const reviewLabels = { approved: "Dopuszczony przez rodzinę", excluded: "Wykluczony przez rodzinę", check: "Wymaga sprawdzenia przez rodzinę" };
+  const controls = ["admin", "reviewer"].includes(state.role) ? `<div class="review-actions">
+    <button type="button" data-review="approved" data-recipe-id="${recipe.id}">Dopuść</button>
+    <button type="button" data-review="check" data-recipe-id="${recipe.id}">Sprawdź</button>
+    <button type="button" data-review="excluded" data-recipe-id="${recipe.id}">Wyklucz</button>
+  </div>` : "";
   return `<article class="recipe-card">
     <div class="recipe-card__top"><h2>${recipe.title}</h2>${time}</div>
     <p class="review">Wymaga weryfikacji diety</p>
     ${evaluation.ratingLabel ? `<p class="product-rating">OCENA PRODUKTU: ${evaluation.ratingLabel}</p>` : ""}
     ${evaluation.warnings?.length ? `<p class="review review--warning">Dopuszczone warunkowo: ${evaluation.warnings.join("; ")}</p>` : ""}
+    ${review?.status ? `<p class="family-review">${reviewLabels[review.status]}</p>` : ""}
     <p class="recipe-note">${recipe.note || "Sprawdź składniki przed przygotowaniem."}</p>
     <details><summary>Składniki</summary><ul>${ingredients}</ul></details>
     <p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${recipe.publisher}</a></p>
+    ${controls}
   </article>`;
+}
+
+async function getRecipeReviews() {
+  const snapshot = await getDocs(collection(db, "recipeReviews"));
+  return Object.fromEntries(snapshot.docs.map((item) => [item.id, item.data()]));
 }
 
 async function searchRecipes() {
@@ -133,7 +146,13 @@ async function searchRecipes() {
       !phrase || recipe.ingredients.some((ingredient) => normalize(ingredient).includes(phrase))
     );
     const products = state.person === "emilka" ? await getHistamineProducts() : [];
-    const evaluated = found.map((recipe) => ({ recipe, evaluation: evaluateRecipeFor(state.person, recipe, products) }));
+    const reviews = await getRecipeReviews();
+    const evaluated = found.map((recipe) => {
+      const evaluation = evaluateRecipeFor(state.person, recipe, products);
+      const review = reviews[recipe.id];
+      if (review?.status === "excluded") return { recipe, evaluation: { visible: false, reasons: ["wykluczony decyzją rodziny"] }, review };
+      return { recipe, evaluation, review };
+    });
     const recipes = evaluated.filter((item) => item.evaluation.visible).sort((left, right) => left.recipe.title.localeCompare(right.recipe.title, "pl"));
     if (!recipes.length) {
       const baseMessage = phrase
@@ -157,7 +176,7 @@ async function searchRecipes() {
     }
     list.className = "recipe-list";
     const excluded = evaluated.length - recipes.length;
-    list.innerHTML = `${state.person === "emilka" && excluded ? `<p class="filter-note">Ukryto ${excluded} przepisów niespełniających zasad Emilki.</p>` : ""}${recipes.map((item) => recipeCard(item.recipe, item.evaluation)).join("")}`;
+    list.innerHTML = `${state.person === "emilka" && excluded ? `<p class="filter-note">Ukryto ${excluded} przepisów niespełniających zasad Emilki.</p>` : ""}${recipes.map((item) => recipeCard(item.recipe, item.evaluation, item.review)).join("")}`;
   } catch {
     list.className = "empty";
     list.textContent = "Nie udało się pobrać prywatnej bazy. Spróbuj ponownie.";
@@ -216,6 +235,21 @@ document.getElementById("login-button").addEventListener("click", async () => {
 });
 
 document.getElementById("logout-button").addEventListener("click", () => signOut(auth));
+document.getElementById("recipe-list").addEventListener("click", async (event) => {
+  const button = event.target.closest("button[data-review]");
+  if (!button || !["admin", "reviewer"].includes(state.role)) return;
+  button.disabled = true;
+  try {
+    await setDoc(doc(db, "recipeReviews", button.dataset.recipeId), {
+      status: button.dataset.review,
+      reviewedBy: state.user.email,
+      reviewedAt: serverTimestamp()
+    });
+    await searchRecipes();
+  } finally {
+    button.disabled = false;
+  }
+});
 document.getElementById("seed-recipes").addEventListener("click", async () => {
   const message = document.getElementById("portrait-message");
   if (state.role !== "admin") return;

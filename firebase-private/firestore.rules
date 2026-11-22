@@ -15,6 +15,11 @@ service cloud.firestore {
         get(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email)).data.role == 'admin';
     }
 
+    function canReviewRecipes() {
+      return isAllowedFamilyMember() &&
+        get(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email)).data.role in ['admin', 'reviewer'];
+    }
+
     match /allowedUsers/{email} {
       allow get: if signedIn() && request.auth.token.email == email;
       allow list, create, update, delete: if false;
@@ -28,6 +33,12 @@ service cloud.firestore {
     match /histamineProducts/{productId} {
       allow read: if isAllowedFamilyMember();
       allow create, update, delete: if isAdministrator();
+    }
+
+    match /recipeReviews/{recipeId} {
+      allow read: if isAllowedFamilyMember();
+      allow create, update: if canReviewRecipes();
+      allow delete: if isAdministrator();
     }
 
     match /settings/{settingId} {
