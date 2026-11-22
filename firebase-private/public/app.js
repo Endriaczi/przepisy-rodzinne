@@ -22,6 +22,7 @@ const eggWords = ["jajko", "jajka", "jaja", "jajo", "jajek", "jajkiem", "jajem"]
 const glutenTerms = ["gluten", "pszen", "zyt", "jeczm", "orkisz", "bulgur", "kuskus", "semolina"];
 const caseinTerms = ["mleko", "maslo", "jogurt", "ser", "smiet", "twarog", "ricotta", "mascarpone", "kefir", "serwatka"];
 const saltTerms = ["sol", "sol morska", "salt"];
+const ratingLabels = { "0": "DOBRZE TOLEROWANE", "1": "UMIARKOWANA", "2": "NIEZGODNE", "3": "BARDZO ŹLE", "?": "BRAK DANYCH" };
 
 function words(text) {
   return foldText(text).split(" ").filter(Boolean).map((word) => eggWords.includes(word) ? "jajko" : word);
@@ -70,6 +71,7 @@ function evaluateRecipeFor(person, recipe, products) {
   const blocked = [];
   const warnings = [];
   const unknown = [];
+  const ratings = [];
   recipe.ingredients.forEach((ingredient) => {
     if (isPlainSalt(ingredient)) return; // Zasada rodziny: sól oznacza sól niejodowaną.
     if (hasTerm(ingredient, glutenTerms) && !foldText(ingredient).includes("bezgluten")) blocked.push(`${ingredient} — gluten`);
@@ -79,14 +81,23 @@ function evaluateRecipeFor(person, recipe, products) {
       unknown.push(ingredient);
       return;
     }
+    const productRatings = [...new Set(matches.map((product) => product.rating).filter(Boolean))];
+    ratings.push(...productRatings);
+    const excludedRatings = productRatings.filter((rating) => rating === "2" || rating === "3");
+    if (excludedRatings.length) {
+      blocked.push(`${ingredient} — ocena ${excludedRatings.map((rating) => ratingLabels[rating]).join(", ")}`);
+      return;
+    }
+    if (productRatings.includes("1")) warnings.push(`${ingredient} — OCENA PRODUKTU: UMIARKOWANA`);
+    if (productRatings.includes("?")) warnings.push(`${ingredient} — OCENA PRODUKTU: BRAK DANYCH`);
     const symbols = matches.flatMap((product) => Object.values(product.symbols || {}));
-    const hardSymbols = symbols.filter((symbol) => symbol && symbol !== "?");
-    if (hardSymbols.length) blocked.push(`${ingredient} — ${[...new Set(hardSymbols)].join(", ")}`);
-    else if (symbols.includes("?")) warnings.push(`${ingredient} — ?`);
+    if (symbols.includes("H!")) warnings.push(`${ingredient} — H! użyj bardzo świeżego i spożyj od razu`);
+    if (symbols.includes("?")) warnings.push(`${ingredient} — ?`);
   });
   if (blocked.length) return { visible: false, reasons: blocked };
   if (unknown.length) return { visible: false, reasons: unknown.map((item) => `${item} — brak potwierdzenia w bazie`) };
-  return { visible: true, warnings };
+  const strongestRating = ["1", "?", "0"].find((rating) => ratings.includes(rating));
+  return { visible: true, warnings, ratingLabel: strongestRating ? ratingLabels[strongestRating] : "BRAK DANYCH" };
 }
 
 function recipeCard(recipe, evaluation) {
@@ -95,6 +106,7 @@ function recipeCard(recipe, evaluation) {
   return `<article class="recipe-card">
     <div class="recipe-card__top"><h2>${recipe.title}</h2>${time}</div>
     <p class="review">Wymaga weryfikacji diety</p>
+    ${evaluation.ratingLabel ? `<p class="product-rating">OCENA PRODUKTU: ${evaluation.ratingLabel}</p>` : ""}
     ${evaluation.warnings?.length ? `<p class="review review--warning">Dopuszczone warunkowo: ${evaluation.warnings.join("; ")}</p>` : ""}
     <p class="recipe-note">${recipe.note || "Sprawdź składniki przed przygotowaniem."}</p>
     <details><summary>Składniki</summary><ul>${ingredients}</ul></details>
