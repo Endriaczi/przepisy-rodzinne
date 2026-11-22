@@ -22,14 +22,18 @@ async function hasAccess(user) {
 
 async function loadPortrait(person) {
   const portrait = document.getElementById(`portrait-${person}`);
-  try {
-    const url = await getDownloadURL(ref(storage, `portraits/${person}.jpg`));
-    portrait.style.backgroundImage = `url("${url}")`;
-    portrait.classList.add("has-image");
-    portrait.textContent = "";
-  } catch {
-    // The portrait has not been uploaded yet; leave the neutral placeholder visible.
+  for (const filename of [`${person}.jpg`, `${person}.jpeg`, `${person}.png`]) {
+    try {
+      const url = await getDownloadURL(ref(storage, `portraits/${filename}`));
+      portrait.style.backgroundImage = `url("${url}")`;
+      portrait.classList.add("has-image");
+      portrait.textContent = "";
+      return;
+    } catch {
+      // Try the next accepted image extension.
+    }
   }
+  // The portrait has not been uploaded yet; leave the neutral placeholder visible.
 }
 
 onAuthStateChanged(auth, async (user) => {
