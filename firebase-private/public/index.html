@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#f7f5f0">
+    <title>Przepisy rodzinne</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main class="app">
+      <section id="login-screen" class="screen login-screen">
+        <div class="login-card">
+          <p class="eyebrow">Przepisy rodzinne</p>
+          <h1>Witaj</h1>
+          <p>Zaloguj się swoim kontem Google, aby korzystać z prywatnej bazy przepisów.</p>
+          <button id="login-button" class="primary">Zaloguj przez Google</button>
+          <p id="login-message" class="message" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="people-screen" class="screen people-screen hidden" aria-label="Wybór osoby">
+        <header class="account"><span id="account-name"></span><button id="logout-button">Wyloguj</button></header>
+        <button class="person-card" data-person="emilka" aria-label="Wybierz Emilkę">
+          <span class="portrait">Zdjęcie Emilki<br>dodamy po zabezpieczeniu plików</span>
+          <span class="person-name">Emilka</span>
+        </button>
+        <button class="person-card" data-person="kasia" aria-label="Wybierz Kasię">
+          <span class="portrait">Zdjęcie Kasi<br>dodamy po zabezpieczeniu plików</span>
+          <span class="person-name">Kasia</span>
+        </button>
+      </section>
+
+      <section id="search-screen" class="screen hidden" aria-labelledby="search-title">
+        <header class="topbar"><button class="back" data-back="people" aria-label="Wróć">←</button><h1 id="search-title"></h1></header>
+        <p class="screen-label">Wybierz posiłek</p>
+        <div class="categories" role="group" aria-label="Kategoria posiłku">
+          <button class="category" data-category="sniadanie">Śniadanie</button>
+          <button class="category" data-category="obiad">Obiad</button>
+          <button class="category" data-category="kolacja_przekaska">Kolacja / Przekąska</button>
+        </div>
+        <label class="ingredient-label" for="ingredient">Główny składnik</label>
+        <input id="ingredient" type="search" autocomplete="off" placeholder="np. kurczak, ryż, batat">
+        <button id="show-results" class="primary" disabled>Pokaż przepisy</button>
+      </section>
+
+      <section id="results-screen" class="screen hidden" aria-labelledby="results-title">
+        <header class="topbar"><button class="back" data-back="search" aria-label="Wróć">←</button><h1 id="results-title">Przepisy</h1></header>
+        <p id="result-summary" class="message"></p>
+        <div id="recipe-list" class="empty">Prywatna baza przepisów zostanie dodana w następnym kroku.</div>
+      </section>
+    </main>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    function isAllowedFamilyMember() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email));
+    }
+
+    match /allowedUsers/{email} {
+      allow get: if signedIn() && request.auth.token.email == email;
+      allow list, create, update, delete: if false;
+    }
+
+    match /recipes/{recipeId} {
+      allow read: if isAllowedFamilyMember();
+      allow write: if false;
+    }
+
+    match /settings/{settingId} {
+      allow read: if isAllowedFamilyMember();
+      allow write: if false;
+    }
+  }
+}
