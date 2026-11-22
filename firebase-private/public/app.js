@@ -128,13 +128,23 @@ async function searchRecipes() {
     const evaluated = found.map((recipe) => ({ recipe, evaluation: evaluateRecipeFor(state.person, recipe, products) }));
     const recipes = evaluated.filter((item) => item.evaluation.visible).sort((left, right) => left.recipe.title.localeCompare(right.recipe.title, "pl"));
     if (!recipes.length) {
-      list.className = "empty";
       const baseMessage = phrase
         ? "Nie znaleziono przepisu z tym składnikiem w tej kategorii."
         : "W tej kategorii nie ma jeszcze przepisów testowych.";
-      list.textContent = state.person === "emilka" && found.length
-        ? `Nie pokazano ${found.length} przepisów: zawierają H/A/L/B, gluten, kazeinę lub składnik bez potwierdzenia w bazie Histamina.`
-        : baseMessage;
+      if (state.person === "emilka" && found.length) {
+        const message = `Nie pokazano ${found.length} przepisów: zawierają produkt z oceną „NIEZGODNE” lub „BARDZO ŹLE”, gluten, kazeinę albo składnik bez bezpośredniego potwierdzenia w bazie Histamina.`;
+        if (state.role === "admin") {
+          const details = evaluated.map(({ recipe, evaluation }) => `<li><b>${recipe.title}</b><br>${evaluation.reasons.join("; ")}</li>`).join("");
+          list.className = "recipe-list";
+          list.innerHTML = `<p class="filter-note">${message}</p><details class="admin-diagnostics"><summary>Dlaczego ukryto przepisy? (tylko administrator)</summary><ul>${details}</ul></details>`;
+        } else {
+          list.className = "empty";
+          list.textContent = message;
+        }
+      } else {
+        list.className = "empty";
+        list.textContent = baseMessage;
+      }
       return;
     }
     list.className = "recipe-list";
