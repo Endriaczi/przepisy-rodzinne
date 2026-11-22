@@ -10,6 +10,11 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email));
     }
 
+    function isAdministrator() {
+      return isAllowedFamilyMember() &&
+        get(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email)).data.role == 'admin';
+    }
+
     match /allowedUsers/{email} {
       allow get: if signedIn() && request.auth.token.email == email;
       allow list, create, update, delete: if false;
@@ -17,7 +22,7 @@ service cloud.firestore {
 
     match /recipes/{recipeId} {
       allow read: if isAllowedFamilyMember();
-      allow write: if false;
+      allow create, update, delete: if isAdministrator();
     }
 
     match /settings/{settingId} {

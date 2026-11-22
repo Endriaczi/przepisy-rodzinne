@@ -1,8 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+import { getFirestore, collection, doc, getDoc, getDocs, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { getStorage, ref, getDownloadURL, uploadBytes } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-storage.js";
 import { firebaseConfig } from "./firebase-config.js";
+import { recipeSeed } from "./recipe-seed.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -13,6 +14,44 @@ const labels = { emilka: "Emilka", kasia: "Kasia", sniadanie: "Śniadanie", obia
 
 const show = (screen) => document.querySelectorAll(".screen").forEach((item) => item.classList.toggle("hidden", item.id !== `${screen}-screen`));
 const setLoginMessage = (text) => { document.getElementById("login-message").textContent = text; };
+const normalize = (text) => text.toLocaleLowerCase("pl-PL").trim();
+
+function recipeCard(recipe) {
+  const ingredients = recipe.ingredients.map((item) => `<li>${item}</li>`).join("");
+  const time = recipe.timeMinutes ? `<span>${recipe.timeMinutes} min</span>` : "";
+  return `<article class="recipe-card">
+    <div class="recipe-card__top"><h2>${recipe.title}</h2>${time}</div>
+    <p class="review">Wymaga weryfikacji diety</p>
+    <p class="recipe-note">${recipe.note || "Sprawdź składniki przed przygotowaniem."}</p>
+    <details><summary>Składniki</summary><ul>${ingredients}</ul></details>
+    <p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${recipe.publisher}</a></p>
+  </article>`;
+}
+
+async function searchRecipes() {
+  const list = document.getElementById("recipe-list");
+  list.className = "empty";
+  list.textContent = "Szukam przepisów…";
+  try {
+    const snapshot = await getDocs(query(collection(db, "recipes"), where("category", "==", state.category)));
+    const phrase = normalize(document.getElementById("ingredient").value);
+    const recipes = snapshot.docs.map((item) => item.data()).filter((recipe) =>
+      !phrase || recipe.ingredients.some((ingredient) => normalize(ingredient).includes(phrase))
+    ).sort((left, right) => left.title.localeCompare(right.title, "pl"));
+    if (!recipes.length) {
+      list.className = "empty";
+      list.textContent = phrase
+        ? "Nie znaleziono przepisu z tym składnikiem w tej kategorii."
+        : "W tej kategorii nie ma jeszcze przepisów testowych.";
+      return;
+    }
+    list.className = "recipe-list";
+    list.innerHTML = recipes.map(recipeCard).join("");
+  } catch {
+    list.className = "empty";
+    list.textContent = "Nie udało się pobrać prywatnej bazy. Spróbuj ponownie.";
+  }
+}
 
 async function getAccess(user) {
   if (!user.email) return false;
@@ -66,6 +105,24 @@ document.getElementById("login-button").addEventListener("click", async () => {
 });
 
 document.getElementById("logout-button").addEventListener("click", () => signOut(auth));
+document.getElementById("seed-recipes").addEventListener("click", async () => {
+  const message = document.getElementById("portrait-message");
+  if (state.role !== "admin") return;
+  message.textContent = "Sprawdzam bazę testową…";
+  try {
+    const existing = await getDocs(query(collection(db, "recipes")));
+    if (!existing.empty) {
+      message.textContent = "Baza przepisów jest już wczytana.";
+      return;
+    }
+    const batch = writeBatch(db);
+    recipeSeed.forEach((recipe) => batch.set(doc(db, "recipes", recipe.id), recipe));
+    await batch.commit();
+    message.textContent = "Dodano 8 przepisów testowych do prywatnej bazy.";
+  } catch {
+    message.textContent = "Nie udało się dodać bazy testowej. Spróbuj ponownie.";
+  }
+});
 document.querySelectorAll("[data-portrait-upload]").forEach((input) => input.addEventListener("change", async () => {
   const person = input.dataset.portraitUpload;
   const file = input.files[0];
@@ -101,8 +158,9 @@ document.querySelectorAll(".category").forEach((button) => button.addEventListen
   document.querySelectorAll(".category").forEach((item) => item.classList.toggle("selected", item === button));
   document.getElementById("show-results").disabled = false;
 }));
-document.getElementById("show-results").addEventListener("click", () => {
+document.getElementById("show-results").addEventListener("click", async () => {
   document.getElementById("result-summary").textContent = `${labels[state.person]} · ${labels[state.category]}`;
   show("results");
+  await searchRecipes();
 });
 document.querySelectorAll("[data-back]").forEach((button) => button.addEventListener("click", () => show(button.dataset.back)));

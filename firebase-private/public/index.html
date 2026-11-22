@@ -33,6 +33,7 @@
           <input id="upload-emilka" data-portrait-upload="emilka" type="file" accept="image/png,image/jpeg" hidden>
           <label class="secondary" for="upload-kasia">Zmień zdjęcie Kasi</label>
           <input id="upload-kasia" data-portrait-upload="kasia" type="file" accept="image/png,image/jpeg" hidden>
+          <button id="seed-recipes" class="secondary" type="button">Wczytaj 8 przepisów testowych</button>
           <p id="portrait-message" class="message" aria-live="polite"></p>
         </section>
       </section>
@@ -53,7 +54,7 @@
       <section id="results-screen" class="screen hidden" aria-labelledby="results-title">
         <header class="topbar"><button class="back" data-back="search" aria-label="Wróć">←</button><h1 id="results-title">Przepisy</h1></header>
         <p id="result-summary" class="message"></p>
-        <div id="recipe-list" class="empty">Prywatna baza przepisów zostanie dodana w następnym kroku.</div>
+        <div id="recipe-list" class="empty" aria-live="polite"></div>
       </section>
     </main>
     <script type="module" src="app.js"></script>
