@@ -58,6 +58,14 @@
         <div id="recipe-list" class="empty" aria-live="polite"></div>
       </section>
     </main>
-    <script type="module" src="app.js?v=20261122-expanded-recipes"></script>
+    <dialog id="review-dialog" class="review-dialog" aria-labelledby="review-dialog-title">
+      <article>
+        <h2 id="review-dialog-title">Co wymaga sprawdzenia?</h2>
+        <p id="review-dialog-reasons"></p>
+        <p class="recipe-note">To nie jest automatyczne wykluczenie. Po sprawdzeniu możesz wrócić do listy i wybrać „Dopuść” albo „Wyklucz”.</p>
+        <button id="review-dialog-close" class="primary" type="button">Rozumiem</button>
+      </article>
+    </dialog>
+    <script type="module" src="app.js?v=20261122-search-and-review"></script>
   </body>
 </html>

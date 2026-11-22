@@ -28,6 +28,26 @@ function words(text) {
   return foldText(text).split(" ").filter(Boolean).map((word) => eggWords.includes(word) ? "jajko" : word);
 }
 
+function searchStem(word) {
+  if (word === "jajko") return word;
+  const suffixes = ["owie", "ami", "ach", "ów", "ow", "om", "ie", "y", "i", "a", "e"];
+  const suffix = suffixes.find((item) => word.endsWith(item) && word.length - item.length >= 4);
+  return suffix ? word.slice(0, -suffix.length) : word;
+}
+
+function searchWords(text) {
+  return words(text).map(searchStem).filter(Boolean);
+}
+
+function ingredientMatchesPhrase(ingredient, phrase) {
+  const phraseWords = searchWords(phrase);
+  if (!phraseWords.length) return true;
+  const ingredientWords = searchWords(ingredient);
+  return phraseWords.every((phraseWord) => ingredientWords.some((ingredientWord) =>
+    ingredientWord === phraseWord || ingredientWord.startsWith(phraseWord) || phraseWord.startsWith(ingredientWord)
+  ));
+}
+
 function hasTerm(ingredient, terms) {
   const value = foldText(ingredient);
   return terms.some((term) => value.includes(term));
@@ -109,11 +129,12 @@ function evaluateRecipeFor(person, recipe, products) {
 }
 
 const reviewLabels = { approved: "Dopuszczony przez rodzinę", excluded: "Wykluczony przez rodzinę", check: "Wymaga sprawdzenia przez rodzinę" };
-function reviewControls(recipeId, canApprove = true) {
+function reviewControls(recipeId, canApprove = true, reasons = []) {
   if (!["admin", "reviewer"].includes(state.role)) return "";
+  const encodedReasons = encodeURIComponent(reasons.join("; ") || "Ten przepis wymaga sprawdzenia przez rodzinę.");
   return `<div class="review-actions">
     ${canApprove ? `<button type="button" data-review="approved" data-recipe-id="${recipeId}">Dopuść</button>` : ""}
-    <button type="button" data-review="check" data-recipe-id="${recipeId}">Sprawdź</button>
+    <button type="button" data-review="check" data-recipe-id="${recipeId}" data-review-reasons="${encodedReasons}">Sprawdź</button>
     <button type="button" data-review="excluded" data-recipe-id="${recipeId}">Wyklucz</button>
   </div>`;
 }
@@ -121,7 +142,7 @@ function reviewControls(recipeId, canApprove = true) {
 function recipeCard(recipe, evaluation, review) {
   const ingredients = recipe.ingredients.map((item) => `<li>${item}</li>`).join("");
   const time = recipe.timeMinutes ? `<span>${recipe.timeMinutes} min</span>` : "";
-  const controls = reviewControls(recipe.id);
+  const controls = reviewControls(recipe.id, true, evaluation.warnings || []);
   return `<article class="recipe-card">
     <div class="recipe-card__top"><h2>${recipe.title}</h2>${time}</div>
     <p class="review">Wymaga weryfikacji diety</p>
@@ -137,7 +158,7 @@ function recipeCard(recipe, evaluation, review) {
 
 function reviewQueue(items) {
   if (!["admin", "reviewer"].includes(state.role) || !items.length) return "";
-  const cards = items.map(({ recipe, evaluation }) => `<li><b>${recipe.title}</b><br>${evaluation.reasons.join("; ")}${reviewControls(recipe.id, evaluation.canOverride)}</li>`).join("");
+  const cards = items.map(({ recipe, evaluation }) => `<li><b>${recipe.title}</b><br>${evaluation.reasons.join("; ")}${reviewControls(recipe.id, evaluation.canOverride, evaluation.reasons)}</li>`).join("");
   return `<details class="admin-diagnostics"><summary>Przepisy wymagające oceny (${items.length})</summary><ul>${cards}</ul></details>`;
 }
 
@@ -154,7 +175,7 @@ async function searchRecipes() {
     const snapshot = await getDocs(query(collection(db, "recipes"), where("category", "==", state.category)));
     const phrase = normalize(document.getElementById("ingredient").value);
     const found = snapshot.docs.map((item) => item.data()).filter((recipe) =>
-      !phrase || recipe.ingredients.some((ingredient) => normalize(ingredient).includes(phrase))
+      !phrase || recipe.ingredients.some((ingredient) => ingredientMatchesPhrase(ingredient, phrase))
     );
     const products = state.person === "emilka" ? await getHistamineProducts() : [];
     const reviews = await getRecipeReviews();
@@ -259,11 +280,16 @@ document.getElementById("recipe-list").addEventListener("click", async (event) =
       reviewedBy: state.user.email,
       reviewedAt: serverTimestamp()
     });
+    if (button.dataset.review === "check") {
+      document.getElementById("review-dialog-reasons").textContent = decodeURIComponent(button.dataset.reviewReasons || "Ten przepis wymaga sprawdzenia przez rodzinę.");
+      document.getElementById("review-dialog").showModal();
+    }
     await searchRecipes();
   } finally {
     button.disabled = false;
   }
 });
+document.getElementById("review-dialog-close").addEventListener("click", () => document.getElementById("review-dialog").close());
 document.getElementById("seed-recipes").addEventListener("click", async () => {
   const message = document.getElementById("portrait-message");
   if (state.role !== "admin") return;
