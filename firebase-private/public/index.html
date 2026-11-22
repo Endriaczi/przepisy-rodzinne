@@ -29,6 +29,14 @@
           <span id="portrait-kasia" class="portrait">Zdjęcie Kasi<br>dodamy po zabezpieczeniu plików</span>
           <span class="person-name">Kasia</span>
         </button>
+        <section id="portrait-admin" class="portrait-admin" hidden aria-label="Zdjęcia administracyjne">
+          <p>Zdjęcia administratora</p>
+          <label class="secondary" for="upload-emilka">Zmień zdjęcie Emilki</label>
+          <input id="upload-emilka" data-portrait-upload="emilka" type="file" accept="image/png,image/jpeg" hidden>
+          <label class="secondary" for="upload-kasia">Zmień zdjęcie Kasi</label>
+          <input id="upload-kasia" data-portrait-upload="kasia" type="file" accept="image/png,image/jpeg" hidden>
+          <p id="portrait-message" class="message" aria-live="polite"></p>
+        </section>
       </section>
 
       <section id="search-screen" class="screen hidden" aria-labelledby="search-title">

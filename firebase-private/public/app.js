@@ -1,23 +1,23 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-import { getStorage, ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-storage.js";
+import { getStorage, ref, getDownloadURL, uploadBytes } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-storage.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-const state = { person: null, category: null, user: null };
+const state = { person: null, category: null, user: null, role: null };
 const labels = { emilka: "Emilka", kasia: "Kasia", sniadanie: "Śniadanie", obiad: "Obiad", kolacja_przekaska: "Kolacja / Przekąska" };
 
 const show = (screen) => document.querySelectorAll(".screen").forEach((item) => item.classList.toggle("hidden", item.id !== `${screen}-screen`));
 const setLoginMessage = (text) => { document.getElementById("login-message").textContent = text; };
 
-async function hasAccess(user) {
+async function getAccess(user) {
   if (!user.email) return false;
   const access = await getDoc(doc(db, "allowedUsers", user.email));
-  return access.exists();
+  return access.exists() ? access.data() : null;
 }
 
 async function loadPortrait(person) {
@@ -40,13 +40,16 @@ onAuthStateChanged(auth, async (user) => {
   if (!user) { state.user = null; show("login"); return; }
   setLoginMessage("Sprawdzam dostęp…");
   try {
-    if (!await hasAccess(user)) {
+    const access = await getAccess(user);
+    if (!access) {
       await signOut(auth);
       setLoginMessage("Ten adres Google nie ma dostępu do aplikacji.");
       return;
     }
     state.user = user;
+    state.role = access.role;
     document.getElementById("account-name").textContent = user.email;
+    document.getElementById("portrait-admin").hidden = access.role !== "admin";
     loadPortrait("emilka");
     loadPortrait("kasia");
     show("people");
@@ -63,6 +66,28 @@ document.getElementById("login-button").addEventListener("click", async () => {
 });
 
 document.getElementById("logout-button").addEventListener("click", () => signOut(auth));
+document.querySelectorAll("[data-portrait-upload]").forEach((input) => input.addEventListener("change", async () => {
+  const person = input.dataset.portraitUpload;
+  const file = input.files[0];
+  const message = document.getElementById("portrait-message");
+  if (!file) return;
+  if (state.role !== "admin") return;
+  if (!file.type.startsWith("image/") || file.size >= 5 * 1024 * 1024) {
+    message.textContent = "Wybierz zdjęcie JPG lub PNG mniejsze niż 5 MB.";
+    input.value = "";
+    return;
+  }
+  message.textContent = `Przesyłam zdjęcie: ${labels[person]}…`;
+  try {
+    await uploadBytes(ref(storage, `portraits/${person}.jpg`), file, { contentType: file.type });
+    await loadPortrait(person);
+    message.textContent = `Zdjęcie ${labels[person]} zostało zapisane prywatnie.`;
+  } catch {
+    message.textContent = "Nie udało się przesłać zdjęcia. Spróbuj ponownie.";
+  } finally {
+    input.value = "";
+  }
+}));
 document.querySelectorAll("[data-person]").forEach((button) => button.addEventListener("click", () => {
   state.person = button.dataset.person;
   state.category = null;

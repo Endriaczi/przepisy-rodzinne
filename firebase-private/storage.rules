@@ -10,11 +10,24 @@ service firebase.storage {
         firestore.exists(/databases/(default)/documents/allowedUsers/$(request.auth.token.email));
     }
 
-    // Portraits and future private recipe photos: read-only for the family.
-    // Uploads are done only by the administrator in the Firebase console.
-    match /{allPaths=**} {
+    function isAdministrator() {
+      return isAllowedFamilyMember() &&
+        firestore.get(/databases/(default)/documents/allowedUsers/$(request.auth.token.email)).data.role == 'admin';
+    }
+
+    // Family portraits can be read by approved accounts only.
+    match /portraits/{portraitFile} {
       allow read: if isAllowedFamilyMember();
-      allow write: if false;
+      allow create, update: if isAdministrator()
+        && portraitFile in ['emilka.jpg', 'kasia.jpg']
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if false;
+    }
+
+    // Other private assets are not open for client uploads yet.
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
   }
 }
