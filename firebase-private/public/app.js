@@ -129,12 +129,15 @@ function evaluateRecipeFor(person, recipe, products) {
 }
 
 const reviewLabels = { approved: "Dopuszczony przez rodzinę", excluded: "Wykluczony przez rodzinę", check: "Wymaga sprawdzenia przez rodzinę" };
-function reviewControls(recipeId, canApprove = true, reasons = []) {
+function reviewControls(recipeId, canApprove = true, reasons = [], ingredients = []) {
   if (!["admin", "reviewer"].includes(state.role)) return "";
-  const encodedReasons = encodeURIComponent(reasons.join("; ") || "Ten przepis wymaga sprawdzenia przez rodzinę.");
+  const encodedDetails = encodeURIComponent(JSON.stringify({
+    reasons: reasons.length ? reasons : ["Ten przepis wymaga sprawdzenia przez rodzinę."],
+    ingredients
+  }));
   return `<div class="review-actions">
     ${canApprove ? `<button type="button" data-review="approved" data-recipe-id="${recipeId}">Dopuść</button>` : ""}
-    <button type="button" data-review="check" data-recipe-id="${recipeId}" data-review-reasons="${encodedReasons}">Sprawdź</button>
+    <button type="button" data-review="check" data-recipe-id="${recipeId}" data-review-details="${encodedDetails}">Sprawdź</button>
     <button type="button" data-review="excluded" data-recipe-id="${recipeId}">Wyklucz</button>
   </div>`;
 }
@@ -142,7 +145,7 @@ function reviewControls(recipeId, canApprove = true, reasons = []) {
 function recipeCard(recipe, evaluation, review) {
   const ingredients = recipe.ingredients.map((item) => `<li>${item}</li>`).join("");
   const time = recipe.timeMinutes ? `<span>${recipe.timeMinutes} min</span>` : "";
-  const controls = reviewControls(recipe.id, true, evaluation.warnings || []);
+  const controls = reviewControls(recipe.id, true, evaluation.warnings || [], recipe.ingredients);
   return `<article class="recipe-card">
     <div class="recipe-card__top"><h2>${recipe.title}</h2>${time}</div>
     <p class="review">Wymaga weryfikacji diety</p>
@@ -158,7 +161,7 @@ function recipeCard(recipe, evaluation, review) {
 
 function reviewQueue(items) {
   if (!["admin", "reviewer"].includes(state.role) || !items.length) return "";
-  const cards = items.map(({ recipe, evaluation }) => `<li><b>${recipe.title}</b><br>${evaluation.reasons.join("; ")}${reviewControls(recipe.id, evaluation.canOverride, evaluation.reasons)}</li>`).join("");
+  const cards = items.map(({ recipe, evaluation }) => `<li><b>${recipe.title}</b><br>${evaluation.reasons.join("; ")}${reviewControls(recipe.id, evaluation.canOverride, evaluation.reasons, recipe.ingredients)}</li>`).join("");
   return `<details class="admin-diagnostics"><summary>Przepisy wymagające oceny (${items.length})</summary><ul>${cards}</ul></details>`;
 }
 
@@ -281,7 +284,16 @@ document.getElementById("recipe-list").addEventListener("click", async (event) =
       reviewedAt: serverTimestamp()
     });
     if (button.dataset.review === "check") {
-      document.getElementById("review-dialog-reasons").textContent = decodeURIComponent(button.dataset.reviewReasons || "Ten przepis wymaga sprawdzenia przez rodzinę.");
+      const details = JSON.parse(decodeURIComponent(button.dataset.reviewDetails || "{}"));
+      const reasons = details.reasons || ["Ten przepis wymaga sprawdzenia przez rodzinę."];
+      document.getElementById("review-dialog-reasons").textContent = reasons.join("; ");
+      const reasonsList = document.getElementById("review-dialog-ingredients");
+      reasonsList.replaceChildren(...(details.ingredients || []).map((ingredient) => {
+        const item = document.createElement("li");
+        item.textContent = ingredient;
+        if (reasons.some((reason) => reason.startsWith(`${ingredient} —`))) item.classList.add("is-questionable");
+        return item;
+      }));
       document.getElementById("review-dialog").showModal();
     }
     await searchRecipes();

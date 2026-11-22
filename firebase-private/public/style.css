@@ -60,6 +60,11 @@ input { width: 100%; min-height: 54px; border: 2px solid #b8dfdf; border-radius:
 .review-dialog article { padding: 24px; }
 .review-dialog h2 { margin-top: 0; }
 .review-dialog p { line-height: 1.55; }
+.review-dialog h3 { margin: 20px 0 8px; font-size: 1rem; }
+.review-dialog-ingredients { margin: 0; padding-left: 22px; line-height: 1.65; }
+.review-dialog-ingredients .is-questionable { color: #8a5300; font-weight: 800; }
+.review-dialog-key { margin: 12px 0; font-size: .85rem; }
+.review-dialog-key span { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #d79000; }
 
 @media (prefers-color-scheme: dark) {
   :root { background: #062a30; color: #e6fbfa; }
@@ -88,4 +93,5 @@ input { width: 100%; min-height: 54px; border: 2px solid #b8dfdf; border-radius:
   .review-actions button { border-color: #27757b; background: #164950; color: #a6f1ed; }
   .admin-diagnostics { border-color: #27757b; color: #b9d9d8; }
   .review-dialog { background: #0d363c; border-color: #27757b; color: #e6fbfa; }
+  .review-dialog-ingredients .is-questionable { color: #ffd475; }
 }
