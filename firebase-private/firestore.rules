@@ -25,6 +25,11 @@ service cloud.firestore {
       allow create, update, delete: if isAdministrator();
     }
 
+    match /histamineProducts/{productId} {
+      allow read: if isAllowedFamilyMember();
+      allow create, update, delete: if isAdministrator();
+    }
+
     match /settings/{settingId} {
       allow read: if isAllowedFamilyMember();
       allow write: if false;

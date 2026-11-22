@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-import { getFirestore, collection, doc, getDoc, getDocs, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+import { getFirestore, collection, doc, getDoc, getDocs, query, where, limit, writeBatch } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { getStorage, ref, getDownloadURL, uploadBytes } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-storage.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { recipeSeed } from "./recipe-seed.js";
@@ -11,6 +11,7 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const state = { person: null, category: null, user: null, role: null };
 const labels = { emilka: "Emilka", kasia: "Kasia", sniadanie: "Śniadanie", obiad: "Obiad", kolacja_przekaska: "Kolacja / Przekąska" };
+const histamineSourceUrl = "https://raw.githubusercontent.com/Endriaczi/Histamina/main/script0.js";
 
 const show = (screen) => document.querySelectorAll(".screen").forEach((item) => item.classList.toggle("hidden", item.id !== `${screen}-screen`));
 const setLoginMessage = (text) => { document.getElementById("login-message").textContent = text; };
@@ -121,6 +122,46 @@ document.getElementById("seed-recipes").addEventListener("click", async () => {
     message.textContent = "Dodano 8 przepisów testowych do prywatnej bazy.";
   } catch {
     message.textContent = "Nie udało się dodać bazy testowej. Spróbuj ponownie.";
+  }
+});
+document.getElementById("import-histamine").addEventListener("click", async () => {
+  const message = document.getElementById("portrait-message");
+  if (state.role !== "admin") return;
+  message.textContent = "Sprawdzam prywatną bazę Histamina…";
+  try {
+    const existing = await getDocs(query(collection(db, "histamineProducts"), limit(1)));
+    if (!existing.empty) {
+      message.textContent = "Baza Histamina jest już zaimportowana.";
+      return;
+    }
+    const response = await fetch(histamineSourceUrl);
+    if (!response.ok) throw new Error("source unavailable");
+    const source = await response.text();
+    const start = source.indexOf("const data=") + "const data=".length;
+    const end = source.indexOf("];\r\nfunction foldText") >= 0
+      ? source.indexOf("];\r\nfunction foldText")
+      : source.indexOf("];\nfunction foldText");
+    if (start < "const data=".length || end < start) throw new Error("source format changed");
+    const products = JSON.parse(source.slice(start, end + 1));
+    for (let offset = 0; offset < products.length; offset += 400) {
+      const batch = writeBatch(db);
+      products.slice(offset, offset + 400).forEach((product, index) => {
+        const id = `histamine-${String(offset + index + 1).padStart(4, "0")}`;
+        batch.set(doc(db, "histamineProducts", id), {
+          polishName: product.polska_nazwa || "",
+          englishName: product.angielska_nazwa || "",
+          rating: product.ocena || "",
+          symbols: product.symbol_columns || {},
+          note: product.adnotacja_PL || "",
+          sourcePage: product.strona || null
+        });
+      });
+      await batch.commit();
+      message.textContent = `Importuję bazę Histamina: ${Math.min(offset + 400, products.length)} z ${products.length} produktów…`;
+    }
+    message.textContent = `Zaimportowano prywatnie ${products.length} produktów z bazy Histamina.`;
+  } catch {
+    message.textContent = "Import bazy Histamina nie powiódł się. Spróbuj ponownie.";
   }
 });
 document.querySelectorAll("[data-portrait-upload]").forEach((input) => input.addEventListener("change", async () => {
