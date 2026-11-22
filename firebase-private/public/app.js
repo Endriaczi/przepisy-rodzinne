@@ -9,7 +9,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-const state = { person: null, category: null, user: null, role: null, histamineProducts: null };
+const state = { person: null, category: null, user: null, role: null, histamineProducts: null, ingredientRules: null };
 const labels = { emilka: "Emilka", kasia: "Kasia", sniadanie: "Śniadanie", obiad: "Obiad", kolacja_przekaska: "Kolacja / Przekąska" };
 const histamineSourceUrl = "https://raw.githubusercontent.com/Endriaczi/Histamina/main/script0.js";
 
@@ -23,6 +23,7 @@ const glutenTerms = ["gluten", "pszen", "zyt", "jeczm", "orkisz", "bulgur", "kus
 const caseinTerms = ["mleko", "maslo", "jogurt", "ser", "smiet", "twarog", "ricotta", "mascarpone", "kefir", "serwatka"];
 const saltTerms = ["sol", "sol morska", "salt"];
 const ratingLabels = { "0": "DOBRZE TOLEROWANE", "1": "UMIARKOWANA", "2": "NIEZGODNE", "3": "BARDZO ŹLE", "?": "BRAK DANYCH" };
+const ruleStatusLabels = { allowed: "Dopuszczony", conditional: "Dopuszczony warunkowo", substitute: "Zamień na", excluded: "Nie używamy" };
 
 function words(text) {
   return foldText(text).split(" ").filter(Boolean).map((word) => eggWords.includes(word) ? "jajko" : word);
@@ -88,7 +89,27 @@ async function getHistamineProducts() {
   return state.histamineProducts;
 }
 
-function evaluateRecipeFor(person, recipe, products) {
+async function getIngredientRules() {
+  if (state.ingredientRules) return state.ingredientRules;
+  const snapshot = await getDocs(collection(db, "ingredientRules"));
+  state.ingredientRules = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+  return state.ingredientRules;
+}
+
+function ruleForIngredient(rules, ingredient) {
+  const key = searchWords(ingredient).join(" ");
+  return rules.find((rule) => rule.key === key) || null;
+}
+
+function familyRuleMessage(ingredient, rule) {
+  const note = rule.note ? ` — ${rule.note}` : "";
+  if (rule.status === "substitute") return `${ingredient} → zamień na: ${rule.replacement || "ustalony zamiennik"}${note}`;
+  if (rule.status === "conditional") return `${ingredient} — tylko warunkowo${note}`;
+  if (rule.status === "allowed") return `${ingredient} — dopuszczony przez rodzinę${note}`;
+  return `${ingredient} — nie używamy${note}`;
+}
+
+function evaluateRecipeFor(person, recipe, products, familyRules) {
   if (person === "kasia") {
     const gluten = recipe.ingredients.filter((ingredient) =>
       hasTerm(ingredient, glutenTerms) && !foldText(ingredient).includes("bezgluten")
@@ -98,9 +119,17 @@ function evaluateRecipeFor(person, recipe, products) {
 
   const blocked = [];
   const warnings = [];
+  const familyNotes = [];
   const unknown = [];
   const ratings = [];
   recipe.ingredients.forEach((ingredient) => {
+    const familyRule = ruleForIngredient(familyRules, ingredient);
+    if (familyRule) {
+      const message = familyRuleMessage(ingredient, familyRule);
+      if (familyRule.status === "excluded") blocked.push(message);
+      else familyNotes.push(message);
+      return;
+    }
     if (isPlainSalt(ingredient)) return; // Zasada rodziny: sól oznacza sól niejodowaną.
     if (hasTerm(ingredient, glutenTerms) && !foldText(ingredient).includes("bezgluten")) blocked.push(`${ingredient} — gluten`);
     if (hasCasein(ingredient)) blocked.push(`${ingredient} — kazeina`);
@@ -122,10 +151,10 @@ function evaluateRecipeFor(person, recipe, products) {
     if (symbols.includes("H!")) warnings.push(`${ingredient} — H! użyj bardzo świeżego i spożyj od razu`);
     if (symbols.includes("?")) warnings.push(`${ingredient} — ?`);
   });
-  if (blocked.length) return { visible: false, canOverride: false, reasons: blocked };
-  if (unknown.length) return { visible: false, canOverride: true, reasons: unknown.map((item) => `${item} — brak potwierdzenia w bazie`) };
+  if (blocked.length) return { visible: false, canOverride: false, reasons: blocked, familyNotes };
+  if (unknown.length) return { visible: false, canOverride: true, reasons: unknown.map((item) => `${item} — brak potwierdzenia w bazie`), familyNotes };
   const strongestRating = ["1", "?", "0"].find((rating) => ratings.includes(rating));
-  return { visible: true, canOverride: false, warnings, ratingLabel: strongestRating ? ratingLabels[strongestRating] : "BRAK DANYCH" };
+  return { visible: true, canOverride: false, warnings, familyNotes, ratingLabel: strongestRating ? ratingLabels[strongestRating] : "BRAK DANYCH" };
 }
 
 const reviewLabels = { approved: "Dopuszczony przez rodzinę", excluded: "Wykluczony przez rodzinę", check: "Wymaga sprawdzenia przez rodzinę" };
@@ -152,6 +181,7 @@ function recipeCard(recipe, evaluation, review) {
     <p class="review">Wymaga weryfikacji diety</p>
     ${evaluation.ratingLabel ? `<p class="product-rating">OCENA PRODUKTU: ${evaluation.ratingLabel}</p>` : ""}
     ${evaluation.warnings?.length ? `<p class="review review--warning">Dopuszczone warunkowo: ${evaluation.warnings.join("; ")}</p>` : ""}
+    ${evaluation.familyNotes?.length ? `<p class="family-review">Zasada rodzinna: ${evaluation.familyNotes.join("; ")}</p>` : ""}
     ${review?.status ? `<p class="family-review">${reviewLabels[review.status]}</p>` : ""}
     <p class="recipe-note">${recipe.note || "Sprawdź składniki przed przygotowaniem."}</p>
     <details><summary>Składniki</summary><ul>${ingredients}</ul></details>
@@ -182,9 +212,10 @@ async function searchRecipes() {
       !phrase || recipe.ingredients.some((ingredient) => ingredientMatchesPhrase(ingredient, phrase))
     );
     const products = state.person === "emilka" ? await getHistamineProducts() : [];
+    const familyRules = state.person === "emilka" ? await getIngredientRules() : [];
     const reviews = await getRecipeReviews();
     const evaluated = found.map((recipe) => {
-      const evaluation = evaluateRecipeFor(state.person, recipe, products);
+      const evaluation = evaluateRecipeFor(state.person, recipe, products, familyRules);
       const review = reviews[recipe.id];
       if (review?.status === "excluded") return { recipe, evaluation: { visible: false, canOverride: false, reasons: ["wykluczony decyzją rodziny"] }, review };
       if (review?.status === "approved" && evaluation.canOverride) {
@@ -258,6 +289,7 @@ onAuthStateChanged(auth, async (user) => {
     state.role = access.role;
     document.getElementById("account-name").textContent = user.email;
     document.getElementById("portrait-admin").hidden = access.role !== "admin";
+    document.getElementById("family-rules-button").hidden = !["admin", "reviewer"].includes(access.role);
     loadPortrait("emilka");
     loadPortrait("kasia");
     show("people");
@@ -274,6 +306,99 @@ document.getElementById("login-button").addEventListener("click", async () => {
 });
 
 document.getElementById("logout-button").addEventListener("click", () => signOut(auth));
+function escapeHtml(text) {
+  return String(text || "").replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
+}
+
+function ruleId(ingredient) {
+  return `rule-${foldText(ingredient).replace(/\s+/g, "-")}`;
+}
+
+async function saveIngredientRule(rule) {
+  await setDoc(doc(db, "ingredientRules", ruleId(rule.ingredient)), {
+    ...rule,
+    key: searchWords(rule.ingredient).join(" "),
+    updatedBy: state.user.email,
+    updatedAt: serverTimestamp()
+  });
+  state.ingredientRules = null;
+}
+
+async function renderIngredientRules() {
+  const list = document.getElementById("rules-list");
+  list.textContent = "Pobieram zasady…";
+  try {
+    const rules = await getIngredientRules();
+    if (!rules.length) {
+      list.innerHTML = "<p class=\"message\">Nie ma jeszcze zapisanych zasad. Możesz dodać własną albo wczytać ustalone przykłady.</p>";
+      return;
+    }
+    list.innerHTML = rules.sort((left, right) => left.ingredient.localeCompare(right.ingredient, "pl")).map((rule) => `<article class="rule-card">
+      <h2>${escapeHtml(rule.ingredient)}</h2>
+      <p class="rule-card__status">${ruleStatusLabels[rule.status] || "Ustalono"}${rule.replacement ? `: ${escapeHtml(rule.replacement)}` : ""}</p>
+      ${rule.note ? `<p>${escapeHtml(rule.note)}</p>` : ""}
+      <button class="secondary" type="button" data-edit-rule="${escapeHtml(rule.id)}">Edytuj</button>
+    </article>`).join("");
+  } catch {
+    list.textContent = "Nie udało się pobrać zasad składników.";
+  }
+}
+
+document.getElementById("family-rules-button").addEventListener("click", async () => {
+  show("rules");
+  await renderIngredientRules();
+});
+document.getElementById("ingredient-rule-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!["admin", "reviewer"].includes(state.role)) return;
+  const message = document.getElementById("rule-message");
+  const rule = {
+    ingredient: document.getElementById("rule-ingredient").value.trim(),
+    status: document.getElementById("rule-status").value,
+    replacement: document.getElementById("rule-replacement").value.trim(),
+    note: document.getElementById("rule-note").value.trim()
+  };
+  if (!rule.ingredient) return;
+  message.textContent = "Zapisuję zasadę…";
+  try {
+    await saveIngredientRule(rule);
+    event.target.reset();
+    message.textContent = "Zasada rodzinna została zapisana.";
+    await renderIngredientRules();
+  } catch {
+    message.textContent = "Nie udało się zapisać zasady.";
+  }
+});
+document.getElementById("rules-list").addEventListener("click", async (event) => {
+  const button = event.target.closest("button[data-edit-rule]");
+  if (!button) return;
+  const rule = (await getIngredientRules()).find((item) => item.id === button.dataset.editRule);
+  if (!rule) return;
+  document.getElementById("rule-ingredient").value = rule.ingredient;
+  document.getElementById("rule-status").value = rule.status;
+  document.getElementById("rule-replacement").value = rule.replacement || "";
+  document.getElementById("rule-note").value = rule.note || "";
+  document.getElementById("rule-ingredient").focus();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+document.getElementById("seed-agreed-rules").addEventListener("click", async () => {
+  if (!["admin", "reviewer"].includes(state.role)) return;
+  const message = document.getElementById("rule-message");
+  const agreedRules = [
+    { ingredient: "masło", status: "substitute", replacement: "masło klarowane", note: "Zwykłego masła nie używamy." },
+    { ingredient: "masło klarowane", status: "allowed", replacement: "", note: "Dopuszczone przez dietetyka." },
+    { ingredient: "mleko", status: "substitute", replacement: "mleko kokosowe", note: "Zwykłe mleko zastępujemy mlekiem kokosowym." },
+    { ingredient: "sól", status: "substitute", replacement: "sól niejodowana", note: "Używamy soli niejodowanej." }
+  ];
+  message.textContent = "Zapisuję ustalone zasady…";
+  try {
+    for (const rule of agreedRules) await saveIngredientRule(rule);
+    message.textContent = "Dodano cztery ustalone zasady rodzinne.";
+    await renderIngredientRules();
+  } catch {
+    message.textContent = "Nie udało się dodać ustalonych zasad.";
+  }
+});
 function openReviewDialog(details) {
   const reasons = details.reasons || ["Ten przepis wymaga sprawdzenia przez rodzinę."];
   document.getElementById("review-dialog-reasons").textContent = reasons.join("; ");

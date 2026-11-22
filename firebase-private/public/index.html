@@ -20,7 +20,7 @@
       </section>
 
       <section id="people-screen" class="screen people-screen hidden" aria-label="Wybór osoby">
-        <header class="account"><span id="account-name"></span><button id="logout-button">Wyloguj</button></header>
+        <header class="account"><span id="account-name"></span><span class="account-actions"><button id="family-rules-button" hidden>Zasady</button><button id="logout-button">Wyloguj</button></span></header>
         <button class="person-card" data-person="emilka" aria-label="Wybierz Emilkę">
           <span id="portrait-emilka" class="portrait">Zdjęcie Emilki<br>dodamy po zabezpieczeniu plików</span>
         </button>
@@ -57,6 +57,30 @@
         <p id="result-summary" class="message"></p>
         <div id="recipe-list" class="empty" aria-live="polite"></div>
       </section>
+
+      <section id="rules-screen" class="screen hidden" aria-labelledby="rules-title">
+        <header class="topbar"><button class="back" data-back="people" aria-label="Wróć">←</button><h1 id="rules-title">Zasady składników</h1></header>
+        <p class="message">Te ustalenia mają pierwszeństwo przed automatyczną oceną przepisu.</p>
+        <form id="ingredient-rule-form" class="rule-form">
+          <label for="rule-ingredient">Składnik z przepisu</label>
+          <input id="rule-ingredient" required autocomplete="off" placeholder="np. masło">
+          <label for="rule-status">Decyzja rodziny</label>
+          <select id="rule-status">
+            <option value="allowed">Dopuszczony</option>
+            <option value="conditional">Dopuszczony warunkowo</option>
+            <option value="substitute">Zamień na…</option>
+            <option value="excluded">Nie używamy</option>
+          </select>
+          <label for="rule-replacement">Zamiennik (gdy potrzebny)</label>
+          <input id="rule-replacement" autocomplete="off" placeholder="np. masło klarowane">
+          <label for="rule-note">Warunek lub notatka</label>
+          <textarea id="rule-note" rows="3" placeholder="np. maksymalnie 1 łyżeczka; zgodnie z zaleceniem dietetyka"></textarea>
+          <button class="primary" type="submit">Zapisz zasadę</button>
+          <button id="seed-agreed-rules" class="secondary" type="button">Dodaj ustalone zasady: masło, mleko i sól</button>
+          <p id="rule-message" class="message" aria-live="polite"></p>
+        </form>
+        <div id="rules-list" class="rules-list"></div>
+      </section>
     </main>
     <dialog id="review-dialog" class="review-dialog" aria-labelledby="review-dialog-title">
       <article>
@@ -73,6 +97,6 @@
         </div>
       </article>
     </dialog>
-    <script type="module" src="app.js?v=20261122-review-decisions"></script>
+    <script type="module" src="app.js?v=20261122-family-rules"></script>
   </body>
 </html>

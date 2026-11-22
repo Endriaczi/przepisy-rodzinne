@@ -41,6 +41,12 @@ service cloud.firestore {
       allow delete: if isAdministrator();
     }
 
+    match /ingredientRules/{ruleId} {
+      allow read: if isAllowedFamilyMember();
+      allow create, update: if canReviewRecipes();
+      allow delete: if isAdministrator();
+    }
+
     match /settings/{settingId} {
       allow read: if isAllowedFamilyMember();
       allow write: if false;
