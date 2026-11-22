@@ -19,7 +19,8 @@ h1 { margin: 0; font-size: 1.5rem; }
 .account button { border: 0; background: none; color: #286244; text-decoration: underline; }
 .person-card { border: 1px solid #d9e5de; border-radius: 18px; overflow: hidden; display: grid; grid-template-rows: 170px auto; padding: 0; text-align: left; background: #fffdf8; color: #17352c; }
 .person-card:active { border-color: #286244; background: #dff1e5; }
-.portrait { display: grid; place-items: center; text-align: center; background: #e7f0e9; color: #697b73; line-height: 1.45; font-size: .9rem; }
+.portrait { display: grid; place-items: center; text-align: center; background: #e7f0e9; color: #697b73; line-height: 1.45; font-size: .9rem; background-position: center; background-size: cover; }
+.portrait.has-image { color: transparent; }
 .person-name { padding: 16px; font-size: 1.25rem; font-weight: 500; }
 .topbar { display: flex; align-items: center; gap: 14px; min-height: 52px; margin-bottom: 28px; }
 .topbar h1 { font-size: 1.35rem; }

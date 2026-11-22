@@ -1,0 +1,20 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    function isAllowedFamilyMember() {
+      return signedIn() &&
+        firestore.exists(/databases/(default)/documents/allowedUsers/$(request.auth.token.email));
+    }
+
+    // Portraits and future private recipe photos: read-only for the family.
+    // Uploads are done only by the administrator in the Firebase console.
+    match /{allPaths=**} {
+      allow read: if isAllowedFamilyMember();
+      allow write: if false;
+    }
+  }
+}
