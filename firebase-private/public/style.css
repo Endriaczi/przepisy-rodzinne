@@ -46,6 +46,11 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
 .review--warning { display: block; width: fit-content; background: #e0f5f3; color: #0b626b; }
 .filter-note { margin: 0; padding: 12px 14px; border-radius: 12px; background: #e0f5f3; color: #0b626b; line-height: 1.4; font-size: .9rem; }
 .family-review { margin: 8px 0; color: #0b626b; font-size: .88rem; font-weight: 700; }
+.recipe-status { margin: 12px 0 8px; padding: 10px 12px; border-radius: 12px; }
+.recipe-status__label { display: block; margin-bottom: 3px; font-size: .74rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.recipe-status p { margin: 0; line-height: 1.42; font-size: .9rem; font-weight: 650; }
+.recipe-status--diet { border: 1px solid #83c7c7; background: #e0f5f3; color: #0b626b; }
+.recipe-status--review { border: 1px solid #d7c17d; background: #fff7dc; color: #765900; }
 .review-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
 .review-actions button { border: 1px solid #83c7c7; border-radius: 9px; padding: 9px 6px; background: #effbfa; color: #0b626b; font-weight: 700; }
 .admin-diagnostics { padding: 14px; border: 1px solid #b8dfdf; border-radius: 12px; color: #0b626b; font-size: .9rem; line-height: 1.45; }
@@ -104,6 +109,8 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
   .review { background: #5e4e14; color: #fff0bd; }
   .review--warning, .filter-note { background: #164950; color: #a6f1ed; }
   .family-review { color: #a6f1ed; }
+  .recipe-status--diet { border-color: #27757b; background: #164950; color: #a6f1ed; }
+  .recipe-status--review { border-color: #7d6a2d; background: #4b401e; color: #ffe5a1; }
   .review-actions button { border-color: #27757b; background: #164950; color: #a6f1ed; }
   .admin-diagnostics { border-color: #27757b; color: #b9d9d8; }
   .review-dialog { background: #0d363c; border-color: #27757b; color: #e6fbfa; }

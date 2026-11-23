@@ -105,7 +105,7 @@ function familyRuleMessage(ingredient, rule) {
   const note = rule.note ? ` — ${rule.note}` : "";
   if (rule.status === "substitute") return `${ingredient} → zamień na: ${rule.replacement || "ustalony zamiennik"}${note}`;
   if (rule.status === "conditional") return `${ingredient} — tylko warunkowo${note}`;
-  if (rule.status === "allowed") return `${ingredient} — dopuszczony dla Emilki${note}`;
+  if (rule.status === "allowed") return `${ingredient} — dopuszczone${note}`;
   return `${ingredient} — nie używamy${note}`;
 }
 
@@ -157,7 +157,7 @@ function evaluateRecipeFor(person, recipe, products, familyRules) {
   return { visible: true, canOverride: false, warnings, familyNotes, ratingLabel: strongestRating ? ratingLabels[strongestRating] : "BRAK DANYCH" };
 }
 
-const reviewLabels = { approved: "Dopuszczone przez Kasię", excluded: "Wykluczone przez Kasię", check: "Wymaga sprawdzenia przez Kasię" };
+const reviewLabels = { approved: "Dopuszczone", excluded: "Wykluczone", check: "Wymaga sprawdzenia" };
 function reviewControls(recipeId, canApprove = true, reasons = [], ingredients = []) {
   if (!["admin", "reviewer"].includes(state.role)) return "";
   const encodedDetails = encodeURIComponent(JSON.stringify({
@@ -175,7 +175,9 @@ function reviewControls(recipeId, canApprove = true, reasons = [], ingredients =
 function recipeCard(recipe, evaluation, review) {
   const ingredients = recipe.ingredients.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   const instructions = (recipe.instructions || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
-  const note = (recipe.note || "Sprawdź składniki przed przygotowaniem.").replaceAll("zasadę rodzinną", "ustalenie dietetyczne Emilki");
+  const rawNote = recipe.note || "Sprawdź składniki przed przygotowaniem.";
+  const note = /obsługiwane przez zasadę rodzinną|obsługiwane przez ustalenie dietetyczne/i.test(rawNote) ? "" : rawNote;
+  const familyNotes = (evaluation.familyNotes || []).map(escapeHtml).join("<br>");
   const time = recipe.timeMinutes ? `<span>${recipe.timeMinutes} min</span>` : "";
   const controls = reviewControls(recipe.id, true, evaluation.warnings || [], recipe.ingredients);
   return `<article class="recipe-card">
@@ -183,9 +185,9 @@ function recipeCard(recipe, evaluation, review) {
     <p class="review">Wymaga weryfikacji diety</p>
     ${evaluation.ratingLabel ? `<p class="product-rating">OCENA PRODUKTU: ${evaluation.ratingLabel}</p>` : ""}
     ${evaluation.warnings?.length ? `<p class="review review--warning">Dopuszczone warunkowo: ${evaluation.warnings.join("; ")}</p>` : ""}
-    ${evaluation.familyNotes?.length ? `<p class="family-review">Ustalenie dietetyczne Emilki: ${evaluation.familyNotes.join("; ")}</p>` : ""}
-    ${review?.status ? `<p class="family-review">${reviewLabels[review.status]}</p>` : ""}
-    <p class="recipe-note">${escapeHtml(note)}</p>
+    ${familyNotes ? `<section class="recipe-status recipe-status--diet"><span class="recipe-status__label">Ustalenia Emilki</span><p>${familyNotes}</p></section>` : ""}
+    ${review?.status ? `<section class="recipe-status recipe-status--review"><span class="recipe-status__label">Ocena Kasi</span><p>${reviewLabels[review.status]}</p></section>` : ""}
+    ${note ? `<p class="recipe-note">${escapeHtml(note)}</p>` : ""}
     <details><summary>Składniki</summary><ul>${ingredients}</ul></details>
     ${instructions ? `<details><summary>Przygotowanie</summary><ol>${instructions}</ol></details>` : ""}
     ${recipe.sourceUrl ? `<p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(recipe.publisher)}</a></p>` : `<p class="recipe-source">Źródło: ${escapeHtml(recipe.sourceLabel || recipe.publisher || "Prywatna biblioteka rodzinna")}</p>`}
