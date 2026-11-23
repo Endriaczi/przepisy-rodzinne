@@ -175,6 +175,7 @@ function reviewControls(recipeId, canApprove = true, reasons = [], ingredients =
 function recipeCard(recipe, evaluation, review) {
   const ingredients = recipe.ingredients.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   const instructions = (recipe.instructions || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  const note = (recipe.note || "Sprawdź składniki przed przygotowaniem.").replaceAll("zasadę rodzinną", "ustalenie dietetyczne Emilki");
   const time = recipe.timeMinutes ? `<span>${recipe.timeMinutes} min</span>` : "";
   const controls = reviewControls(recipe.id, true, evaluation.warnings || [], recipe.ingredients);
   return `<article class="recipe-card">
@@ -184,7 +185,7 @@ function recipeCard(recipe, evaluation, review) {
     ${evaluation.warnings?.length ? `<p class="review review--warning">Dopuszczone warunkowo: ${evaluation.warnings.join("; ")}</p>` : ""}
     ${evaluation.familyNotes?.length ? `<p class="family-review">Ustalenie dietetyczne Emilki: ${evaluation.familyNotes.join("; ")}</p>` : ""}
     ${review?.status ? `<p class="family-review">${reviewLabels[review.status]}</p>` : ""}
-    <p class="recipe-note">${recipe.note || "Sprawdź składniki przed przygotowaniem."}</p>
+    <p class="recipe-note">${escapeHtml(note)}</p>
     <details><summary>Składniki</summary><ul>${ingredients}</ul></details>
     ${instructions ? `<details><summary>Przygotowanie</summary><ol>${instructions}</ol></details>` : ""}
     ${recipe.sourceUrl ? `<p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(recipe.publisher)}</a></p>` : `<p class="recipe-source">Źródło: ${escapeHtml(recipe.sourceLabel || recipe.publisher || "Prywatna biblioteka rodzinna")}</p>`}
