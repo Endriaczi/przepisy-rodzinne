@@ -105,7 +105,7 @@ function familyRuleMessage(ingredient, rule) {
   const note = rule.note ? ` — ${rule.note}` : "";
   if (rule.status === "substitute") return `${ingredient} → zamień na: ${rule.replacement || "ustalony zamiennik"}${note}`;
   if (rule.status === "conditional") return `${ingredient} — tylko warunkowo${note}`;
-  if (rule.status === "allowed") return `${ingredient} — dopuszczony przez rodzinę${note}`;
+  if (rule.status === "allowed") return `${ingredient} — dopuszczony dla Emilki${note}`;
   return `${ingredient} — nie używamy${note}`;
 }
 
@@ -182,7 +182,7 @@ function recipeCard(recipe, evaluation, review) {
     <p class="review">Wymaga weryfikacji diety</p>
     ${evaluation.ratingLabel ? `<p class="product-rating">OCENA PRODUKTU: ${evaluation.ratingLabel}</p>` : ""}
     ${evaluation.warnings?.length ? `<p class="review review--warning">Dopuszczone warunkowo: ${evaluation.warnings.join("; ")}</p>` : ""}
-    ${evaluation.familyNotes?.length ? `<p class="family-review">Zasada rodzinna: ${evaluation.familyNotes.join("; ")}</p>` : ""}
+    ${evaluation.familyNotes?.length ? `<p class="family-review">Ustalenie dietetyczne Emilki: ${evaluation.familyNotes.join("; ")}</p>` : ""}
     ${review?.status ? `<p class="family-review">${reviewLabels[review.status]}</p>` : ""}
     <p class="recipe-note">${recipe.note || "Sprawdź składniki przed przygotowaniem."}</p>
     <details><summary>Składniki</summary><ul>${ingredients}</ul></details>
@@ -375,7 +375,7 @@ document.getElementById("ingredient-rule-form").addEventListener("submit", async
   try {
     await saveIngredientRule(rule);
     event.target.reset();
-    message.textContent = "Zasada rodzinna została zapisana.";
+    message.textContent = "Ustalenie dietetyczne Emilki zostało zapisane.";
     await renderIngredientRules();
   } catch {
     message.textContent = "Nie udało się zapisać zasady.";
@@ -405,7 +405,7 @@ document.getElementById("seed-agreed-rules").addEventListener("click", async () 
   message.textContent = "Zapisuję ustalone zasady…";
   try {
     for (const rule of agreedRules) await saveIngredientRule(rule);
-    message.textContent = "Dodano cztery ustalone zasady rodzinne.";
+    message.textContent = "Dodano cztery ustalenia dietetyczne Emilki.";
     await renderIngredientRules();
   } catch {
     message.textContent = "Nie udało się dodać ustalonych zasad.";

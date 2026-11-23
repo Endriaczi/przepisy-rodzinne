@@ -20,7 +20,7 @@
       </section>
 
       <section id="people-screen" class="screen people-screen hidden" aria-label="Wybór osoby">
-        <header class="account"><span id="account-name"></span><span class="account-actions"><button id="family-rules-button" hidden>Zasady</button><button id="logout-button">Wyloguj</button></span></header>
+        <header class="account"><span id="account-name"></span><span class="account-actions"><button id="family-rules-button" hidden>Ustalenia Emilki</button><button id="logout-button">Wyloguj</button></span></header>
         <button class="person-card" data-person="emilka" aria-label="Wybierz Emilkę">
           <span id="portrait-emilka" class="portrait">Zdjęcie Emilki<br>dodamy po zabezpieczeniu plików</span>
         </button>
@@ -61,12 +61,12 @@
       </section>
 
       <section id="rules-screen" class="screen hidden" aria-labelledby="rules-title">
-        <header class="topbar"><button class="back" data-back="people" aria-label="Wróć">←</button><h1 id="rules-title">Zasady składników</h1></header>
-        <p class="message">Te ustalenia mają pierwszeństwo przed automatyczną oceną przepisu.</p>
+        <header class="topbar"><button class="back" data-back="people" aria-label="Wróć">←</button><h1 id="rules-title">Ustalenia dietetyczne Emilki</h1></header>
+        <p class="message">Te ustalenia mają pierwszeństwo przed automatyczną oceną przepisu Emilki.</p>
         <form id="ingredient-rule-form" class="rule-form">
           <label for="rule-ingredient">Składnik z przepisu</label>
           <input id="rule-ingredient" required autocomplete="off" placeholder="np. masło">
-          <label for="rule-status">Decyzja rodziny</label>
+          <label for="rule-status">Ustalenie dietetyczne</label>
           <select id="rule-status">
             <option value="allowed">Dopuszczony</option>
             <option value="conditional">Dopuszczony warunkowo</option>
