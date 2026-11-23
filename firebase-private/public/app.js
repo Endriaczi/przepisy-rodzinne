@@ -157,12 +157,12 @@ function evaluateRecipeFor(person, recipe, products, familyRules) {
   return { visible: true, canOverride: false, warnings, familyNotes, ratingLabel: strongestRating ? ratingLabels[strongestRating] : "BRAK DANYCH" };
 }
 
-const reviewLabels = { approved: "Dopuszczony przez rodzinę", excluded: "Wykluczony przez rodzinę", check: "Wymaga sprawdzenia przez rodzinę" };
+const reviewLabels = { approved: "Dopuszczone przez Kasię", excluded: "Wykluczone przez Kasię", check: "Wymaga sprawdzenia przez Kasię" };
 function reviewControls(recipeId, canApprove = true, reasons = [], ingredients = []) {
   if (!["admin", "reviewer"].includes(state.role)) return "";
   const encodedDetails = encodeURIComponent(JSON.stringify({
     recipeId,
-    reasons: reasons.length ? reasons : ["Ten przepis wymaga sprawdzenia przez rodzinę."],
+    reasons: reasons.length ? reasons : ["Ten przepis wymaga sprawdzenia przez Kasię."],
     ingredients
   }));
   return `<div class="review-actions">
@@ -219,9 +219,9 @@ async function searchRecipes() {
     const evaluated = found.map((recipe) => {
       const evaluation = evaluateRecipeFor(state.person, recipe, products, familyRules);
       const review = reviews[recipe.id];
-      if (review?.status === "excluded") return { recipe, evaluation: { visible: false, canOverride: false, reasons: ["wykluczony decyzją rodziny"] }, review };
+      if (review?.status === "excluded") return { recipe, evaluation: { visible: false, canOverride: false, reasons: ["wykluczony decyzją Kasi"] }, review };
       if (review?.status === "approved" && evaluation.canOverride) {
-        return { recipe, evaluation: { ...evaluation, visible: true, warnings: [...(evaluation.warnings || []), "dopuszczony decyzją rodziny"], ratingLabel: "DOPUSZCZONY" }, review };
+        return { recipe, evaluation: { ...evaluation, visible: true, warnings: [...(evaluation.warnings || []), "dopuszczony decyzją Kasi"], ratingLabel: "DOPUSZCZONY" }, review };
       }
       return { recipe, evaluation, review };
     });
@@ -412,7 +412,7 @@ document.getElementById("seed-agreed-rules").addEventListener("click", async () 
   }
 });
 function openReviewDialog(details) {
-  const reasons = details.reasons || ["Ten przepis wymaga sprawdzenia przez rodzinę."];
+  const reasons = details.reasons || ["Ten przepis wymaga sprawdzenia przez Kasię."];
   document.getElementById("review-dialog-reasons").textContent = reasons.join("; ");
   const ingredientsList = document.getElementById("review-dialog-ingredients");
   ingredientsList.replaceChildren(...(details.ingredients || []).map((ingredient) => {
