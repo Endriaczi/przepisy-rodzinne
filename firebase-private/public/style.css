@@ -65,6 +65,7 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
 .review-dialog h3 { margin: 20px 0 8px; font-size: 1rem; }
 .review-dialog-ingredients { margin: 0; padding-left: 22px; line-height: 1.65; }
 .review-dialog-ingredients .is-questionable { color: #8a5300; font-weight: 800; }
+.rule-from-review { margin-top: 6px; border: 1px solid #b88100; border-radius: 8px; padding: 6px 9px; background: transparent; color: inherit; font: inherit; font-weight: 750; }
 .review-dialog-key { margin: 12px 0; font-size: .85rem; }
 .review-dialog-key span { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #d79000; }
 .dialog-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 18px; }
@@ -107,6 +108,7 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
   .admin-diagnostics { border-color: #27757b; color: #b9d9d8; }
   .review-dialog { background: #0d363c; border-color: #27757b; color: #e6fbfa; }
   .review-dialog-ingredients .is-questionable { color: #ffd475; }
+  .rule-from-review { border-color: #ffd475; }
   .danger { border-color: #d67d7d; background: #4e2528; color: #ffd5d5; }
   .rule-card { background: #0c343a; border-color: #27757b; }
   .rule-card__status { color: #75ebe7; }

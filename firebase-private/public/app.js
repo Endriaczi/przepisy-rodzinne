@@ -9,7 +9,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-const state = { person: null, category: null, user: null, role: null, histamineProducts: null, ingredientRules: null };
+const state = { person: null, category: null, user: null, role: null, histamineProducts: null, ingredientRules: null, rulesReturnScreen: "people" };
 const labels = { emilka: "Emilka", kasia: "Kasia", sniadanie: "Śniadanie", obiad: "Obiad", kolacja_przekaska: "Kolacja / Przekąska" };
 const histamineSourceUrl = "https://raw.githubusercontent.com/Endriaczi/Histamina/main/script0.js";
 
@@ -344,9 +344,19 @@ async function renderIngredientRules() {
   }
 }
 
-document.getElementById("family-rules-button").addEventListener("click", async () => {
+async function openRulesScreen(returnScreen = "people", ingredient = "") {
+  state.rulesReturnScreen = returnScreen;
+  document.querySelector("#rules-screen [data-back]").dataset.back = returnScreen;
+  document.getElementById("ingredient-rule-form").reset();
+  document.getElementById("rule-message").textContent = ingredient ? `Ustal zasadę dla składnika: ${ingredient}.` : "";
+  document.getElementById("rule-ingredient").value = ingredient;
   show("rules");
   await renderIngredientRules();
+  if (ingredient) document.getElementById("rule-ingredient").focus();
+}
+
+document.getElementById("family-rules-button").addEventListener("click", async () => {
+  await openRulesScreen();
 });
 document.getElementById("ingredient-rule-form").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -406,12 +416,27 @@ function openReviewDialog(details) {
   ingredientsList.replaceChildren(...(details.ingredients || []).map((ingredient) => {
     const item = document.createElement("li");
     item.textContent = ingredient;
-    if (reasons.some((reason) => reason.startsWith(`${ingredient} —`))) item.classList.add("is-questionable");
+    if (reasons.some((reason) => reason.startsWith(`${ingredient} —`))) {
+      item.classList.add("is-questionable");
+      const ruleButton = document.createElement("button");
+      ruleButton.type = "button";
+      ruleButton.className = "rule-from-review";
+      ruleButton.dataset.ruleIngredient = ingredient;
+      ruleButton.textContent = "Ustal zasadę";
+      item.append(document.createElement("br"), ruleButton);
+    }
     return item;
   }));
   document.getElementById("review-dialog").dataset.recipeId = details.recipeId || "";
   document.getElementById("review-dialog").showModal();
 }
+
+document.getElementById("review-dialog").addEventListener("click", async (event) => {
+  const button = event.target.closest("button[data-rule-ingredient]");
+  if (!button || !["admin", "reviewer"].includes(state.role)) return;
+  document.getElementById("review-dialog").close();
+  await openRulesScreen("results", button.dataset.ruleIngredient);
+});
 
 document.getElementById("recipe-list").addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-review]");
