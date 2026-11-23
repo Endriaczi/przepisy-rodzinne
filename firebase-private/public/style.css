@@ -55,7 +55,7 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
 .recipe-note, .recipe-source { margin: 8px 0; color: #486a70; line-height: 1.45; font-size: .92rem; }
 .recipe-card details { margin-top: 12px; }
 .recipe-card summary { cursor: pointer; color: #007f87; font-weight: 700; }
-.recipe-card ul { margin: 8px 0 0; padding-left: 20px; color: #486a70; }
+.recipe-card ul, .recipe-card ol { margin: 8px 0 0; padding-left: 20px; color: #486a70; }
 .recipe-card a { color: #007f87; }
 .review-dialog { width: min(92vw, 430px); border: 1px solid #b8dfdf; border-radius: 20px; padding: 0; background: #f9ffff; color: #0b4f5a; }
 .review-dialog::backdrop { background: rgb(0 35 38 / 0.55); }
@@ -98,7 +98,7 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
   .category.selected { background: #079aa2; border-color: #079aa2; }
   input::placeholder { color: #a7c9c8; }
   .recipe-card { background: #0d363c; border-color: #27757b; }
-  .recipe-card__top span, .recipe-note, .recipe-source, .recipe-card ul { color: #b9d9d8; }
+  .recipe-card__top span, .recipe-note, .recipe-source, .recipe-card ul, .recipe-card ol { color: #b9d9d8; }
   .recipe-card summary, .recipe-card a { color: #75ebe7; }
   .product-rating { color: #75ebe7; }
   .review { background: #5e4e14; color: #fff0bd; }

@@ -173,11 +173,12 @@ function reviewControls(recipeId, canApprove = true, reasons = [], ingredients =
 }
 
 function recipeCard(recipe, evaluation, review) {
-  const ingredients = recipe.ingredients.map((item) => `<li>${item}</li>`).join("");
+  const ingredients = recipe.ingredients.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  const instructions = (recipe.instructions || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   const time = recipe.timeMinutes ? `<span>${recipe.timeMinutes} min</span>` : "";
   const controls = reviewControls(recipe.id, true, evaluation.warnings || [], recipe.ingredients);
   return `<article class="recipe-card">
-    <div class="recipe-card__top"><h2>${recipe.title}</h2>${time}</div>
+    <div class="recipe-card__top"><h2>${escapeHtml(recipe.title)}</h2>${time}</div>
     <p class="review">Wymaga weryfikacji diety</p>
     ${evaluation.ratingLabel ? `<p class="product-rating">OCENA PRODUKTU: ${evaluation.ratingLabel}</p>` : ""}
     ${evaluation.warnings?.length ? `<p class="review review--warning">Dopuszczone warunkowo: ${evaluation.warnings.join("; ")}</p>` : ""}
@@ -185,7 +186,8 @@ function recipeCard(recipe, evaluation, review) {
     ${review?.status ? `<p class="family-review">${reviewLabels[review.status]}</p>` : ""}
     <p class="recipe-note">${recipe.note || "Sprawdź składniki przed przygotowaniem."}</p>
     <details><summary>Składniki</summary><ul>${ingredients}</ul></details>
-    <p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${recipe.publisher}</a></p>
+    ${instructions ? `<details><summary>Przygotowanie</summary><ol>${instructions}</ol></details>` : ""}
+    ${recipe.sourceUrl ? `<p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(recipe.publisher)}</a></p>` : `<p class="recipe-source">Źródło: ${escapeHtml(recipe.sourceLabel || recipe.publisher || "Prywatna biblioteka rodzinna")}</p>`}
     ${controls}
   </article>`;
 }
@@ -495,6 +497,27 @@ document.getElementById("seed-recipes").addEventListener("click", async () => {
     message.textContent = `Dodano ${missingRecipes.length} nowych kandydatów do prywatnej bazy.`;
   } catch {
     message.textContent = "Nie udało się uzupełnić bazy. Spróbuj ponownie.";
+  }
+});
+document.getElementById("private-recipe-import").addEventListener("change", async (event) => {
+  const input = event.target;
+  const file = input.files[0];
+  const message = document.getElementById("portrait-message");
+  if (!file || state.role !== "admin") return;
+  message.textContent = "Sprawdzam prywatny plik przepisów…";
+  try {
+    const imported = JSON.parse(await file.text());
+    if (!Array.isArray(imported) || !imported.length || imported.some((recipe) => !recipe.id || !recipe.title || !Array.isArray(recipe.ingredients))) throw new Error("invalid import");
+    for (let offset = 0; offset < imported.length; offset += 400) {
+      const batch = writeBatch(db);
+      imported.slice(offset, offset + 400).forEach((recipe) => batch.set(doc(db, "recipes", recipe.id), recipe));
+      await batch.commit();
+    }
+    message.textContent = `Dodano ${imported.length} prywatnych przepisów do bazy.`;
+  } catch {
+    message.textContent = "Nie udało się wczytać pliku przepisów. Wybierz właściwy plik JSON.";
+  } finally {
+    input.value = "";
   }
 });
 document.getElementById("import-histamine").addEventListener("click", async () => {

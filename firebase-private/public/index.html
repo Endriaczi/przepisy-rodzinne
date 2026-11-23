@@ -34,6 +34,8 @@
           <label class="secondary" for="upload-kasia">Zmień zdjęcie Kasi</label>
           <input id="upload-kasia" data-portrait-upload="kasia" type="file" accept="image/png,image/jpeg" hidden>
           <button id="seed-recipes" class="secondary" type="button">Uzupełnij bazę przepisów</button>
+          <label class="secondary" for="private-recipe-import">Wczytaj prywatny plik przepisów</label>
+          <input id="private-recipe-import" type="file" accept="application/json,.json" hidden>
           <button id="import-histamine" class="secondary" type="button">Importuj bazę Histamina</button>
           <p id="portrait-message" class="message" aria-live="polite"></p>
         </section>
@@ -97,6 +99,6 @@
         </div>
       </article>
     </dialog>
-    <script type="module" src="app.js?v=20261123-rule-from-review"></script>
+    <script type="module" src="app.js?v=20261124-private-recipe-import"></script>
   </body>
 </html>
