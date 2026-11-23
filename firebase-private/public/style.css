@@ -51,6 +51,11 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
 .recipe-status p { margin: 0; line-height: 1.42; font-size: .9rem; font-weight: 650; }
 .recipe-status--diet { border: 1px solid #83c7c7; background: #e0f5f3; color: #0b626b; }
 .recipe-status--review { border: 1px solid #d7c17d; background: #fff7dc; color: #765900; }
+.ingredient-alert { margin: 12px 0 8px; padding: 10px 12px; border-radius: 12px; background: #e0f5f3; color: #0b626b; }
+.ingredient-alert span, .kasia-assessment > span { display: block; margin-bottom: 4px; font-size: .74rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.ingredient-alert p { margin: 0; line-height: 1.42; font-size: .86rem; font-weight: 650; }
+.kasia-assessment { margin: 12px 0 8px; padding: 11px 12px; border: 1px solid #83c7c7; border-radius: 12px; background: #e0f5f3; color: #0b626b; }
+.kasia-assessment ul { margin: 0; padding-left: 18px; line-height: 1.5; font-size: .9rem; font-weight: 650; }
 .review-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
 .review-actions button { border: 1px solid #83c7c7; border-radius: 9px; padding: 9px 6px; background: #effbfa; color: #0b626b; font-weight: 700; }
 .admin-diagnostics { padding: 14px; border: 1px solid #b8dfdf; border-radius: 12px; color: #0b626b; font-size: .9rem; line-height: 1.45; }
@@ -111,6 +116,8 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
   .family-review { color: #a6f1ed; }
   .recipe-status--diet { border-color: #27757b; background: #164950; color: #a6f1ed; }
   .recipe-status--review { border-color: #7d6a2d; background: #4b401e; color: #ffe5a1; }
+  .ingredient-alert, .kasia-assessment { background: #164950; color: #a6f1ed; }
+  .kasia-assessment { border-color: #27757b; }
   .review-actions button { border-color: #27757b; background: #164950; color: #a6f1ed; }
   .admin-diagnostics { border-color: #27757b; color: #b9d9d8; }
   .review-dialog { background: #0d363c; border-color: #27757b; color: #e6fbfa; }

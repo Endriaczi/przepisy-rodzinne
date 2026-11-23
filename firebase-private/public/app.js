@@ -178,15 +178,18 @@ function recipeCard(recipe, evaluation, review) {
   const rawNote = recipe.note || "Sprawdź składniki przed przygotowaniem.";
   const note = /obsługiwane przez zasadę rodzinną|obsługiwane przez ustalenie dietetyczne/i.test(rawNote) ? "" : rawNote;
   const familyNotes = (evaluation.familyNotes || []).map(escapeHtml).join("<br>");
+  const kasiaItems = [
+    review?.status ? `<li><b>Przepis:</b> ${reviewLabels[review.status]}</li>` : "",
+    ...(familyNotes ? [`<li>${familyNotes.replaceAll("<br>", "</li><li>")}</li>`] : [])
+  ].filter(Boolean).join("");
+  const recipeStatus = review?.status === "approved" ? "Dopuszczony przez Kasię" : "Wymaga oceny Kasi";
   const time = recipe.timeMinutes ? `<span>${recipe.timeMinutes} min</span>` : "";
   const controls = reviewControls(recipe.id, true, evaluation.warnings || [], recipe.ingredients);
   return `<article class="recipe-card">
     <div class="recipe-card__top"><h2>${escapeHtml(recipe.title)}</h2>${time}</div>
-    <p class="review">Wymaga weryfikacji diety</p>
-    ${evaluation.ratingLabel ? `<p class="product-rating">OCENA PRODUKTU: ${evaluation.ratingLabel}</p>` : ""}
-    ${evaluation.warnings?.length ? `<p class="review review--warning">Dopuszczone warunkowo: ${evaluation.warnings.join("; ")}</p>` : ""}
-    ${familyNotes ? `<section class="recipe-status recipe-status--diet"><span class="recipe-status__label">Ustalenia Emilki</span><p>${familyNotes}</p></section>` : ""}
-    ${review?.status ? `<section class="recipe-status recipe-status--review"><span class="recipe-status__label">Ocena Kasi</span><p>${reviewLabels[review.status]}</p></section>` : ""}
+    <p class="review">${recipeStatus}</p>
+    ${evaluation.warnings?.length ? `<section class="ingredient-alert"><span>Składniki wymagające uwagi</span><p>${evaluation.warnings.map(escapeHtml).join("<br>")}</p></section>` : ""}
+    ${kasiaItems ? `<section class="kasia-assessment"><span>Ustalenia Kasi dla Emilki</span><ul>${kasiaItems}</ul></section>` : ""}
     ${note ? `<p class="recipe-note">${escapeHtml(note)}</p>` : ""}
     <details><summary>Składniki</summary><ul>${ingredients}</ul></details>
     ${instructions ? `<details><summary>Przygotowanie</summary><ol>${instructions}</ol></details>` : ""}
