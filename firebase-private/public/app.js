@@ -119,7 +119,17 @@ function familyRuleMessage(ingredient, rule) {
   return `${ingredient} — nie używamy${note}`;
 }
 
-function recipeForFamily(recipe, rules) {
+function recipeForFamily(recipe) {
+  const familyRecipe = recipe.familyRecipe;
+  if (familyRecipe?.title && Array.isArray(familyRecipe.ingredients) && Array.isArray(familyRecipe.instructions)) {
+    return {
+      ...recipe,
+      title: familyRecipe.title,
+      ingredients: familyRecipe.ingredients,
+      instructions: familyRecipe.instructions,
+      familyNote: familyRecipe.note || ""
+    };
+  }
   if (state.person !== "emilka") return recipe;
   const replacements = new Map((recipe.familyIngredients || []).map((item) => [item.source, item.display]));
   return {
@@ -207,7 +217,7 @@ function recipeCard(recipe, evaluation, review) {
   const rawNote = recipe.note || "Sprawdź składniki przed przygotowaniem.";
   const note = /obsługiwane przez zasadę rodzinną|obsługiwane przez ustalenie dietetyczne/i.test(rawNote) ? "" : rawNote;
   const familyNotes = (evaluation.familyNotes || []).map(escapeHtml).join("<br>");
-  const recipeStatus = review?.status === "approved" ? "Dopuszczony przez Kasię" : "Wymaga oceny Kasi";
+  const recipeStatus = recipe.needsRepublish ? "Wymaga ponownej publikacji" : review?.status === "approved" ? "Dopuszczony przez Kasię" : "Wymaga oceny Kasi";
   const time = recipe.timeMinutes ? `<span>${recipe.timeMinutes} min</span>` : "";
   const controls = reviewControls(recipe.id, true, evaluation.warnings || [], recipe.ingredients, recipe.title);
   const editorView = isReviewer();
@@ -216,6 +226,9 @@ function recipeCard(recipe, evaluation, review) {
     title: recipe.title,
     ingredients: recipe.ingredients,
     familyIngredients: recipe.familyIngredients || [],
+    familyRecipe: recipe.familyRecipe || null,
+    instructions: recipe.instructions || [],
+    note: recipe.note || "",
     categories: recipeCategories(recipe)
   }));
   return `<article class="recipe-card">
@@ -224,6 +237,7 @@ function recipeCard(recipe, evaluation, review) {
     ${editorView && evaluation.warnings?.length ? `<section class="ingredient-alert"><span>Do sprawdzenia przed decyzją Kasi</span><p>${evaluation.warnings.map(escapeHtml).join("<br>")}</p></section>` : ""}
     ${editorView && familyNotes ? `<section class="kasia-assessment"><span>Podpowiedzi dla Kasi</span><p>Na podstawie wcześniejszych ustaleń:</p><ul><li>${familyNotes.replaceAll("<br>", "</li><li>")}</li></ul></section>` : ""}
     ${editorView && note ? `<p class="recipe-note">${escapeHtml(note)}</p>` : ""}
+    ${!editorView && recipe.familyNote ? `<p class="family-note"><b>Wskazówka Kasi:</b> ${escapeHtml(recipe.familyNote)}</p>` : ""}
     <details><summary>Składniki</summary><ul>${ingredients}</ul></details>
     ${instructions ? `<details><summary>Przygotowanie</summary><ol>${instructions}</ol></details>` : ""}
     ${editorView ? (recipe.sourceUrl ? `<p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(recipe.publisher)}</a></p>` : `<p class="recipe-source">Źródło: ${escapeHtml(recipe.sourceLabel || recipe.publisher || "Prywatna biblioteka rodzinna")}</p>`) : ""}
@@ -298,7 +312,7 @@ async function searchRecipes() {
     const evaluated = found.map((recipe) => {
       if (!isReviewer()) return {
         recipe,
-        displayRecipe: recipeForFamily(recipe, familyRules),
+        displayRecipe: recipeForFamily(recipe),
         evaluation: { visible: true, warnings: [], familyNotes: [] },
         review: null
       };
@@ -567,6 +581,7 @@ async function publishRecipe(recipeId) {
   });
   await setDoc(doc(db, "recipes", recipeId), {
     familyReady: true,
+    needsRepublish: false,
     publishedBy: state.user.email,
     publishedAt: serverTimestamp()
   }, { merge: true });
@@ -581,12 +596,18 @@ document.getElementById("review-dialog").addEventListener("click", async (event)
 
 async function openFamilyVersionDialog(details) {
   const dialog = document.getElementById("family-version-dialog");
-  const container = document.getElementById("family-version-ingredients");
-  const rules = await getIngredientRules();
+  const familyRecipe = details.familyRecipe || {};
   const saved = new Map((details.familyIngredients || []).map((item) => [item.source, item.display]));
   const categories = details.categories?.length ? details.categories : ["kolacja_przekaska"];
   document.getElementById("family-version-recipe").textContent = details.title;
   document.getElementById("family-version-message").textContent = "";
+  document.getElementById("family-version-recipe-title").value = familyRecipe.title || details.title;
+  const initialIngredients = Array.isArray(familyRecipe.ingredients)
+    ? familyRecipe.ingredients
+    : details.ingredients.map((ingredient) => saved.get(ingredient) || ingredient);
+  document.getElementById("family-version-ingredients").value = initialIngredients.join("\n");
+  document.getElementById("family-version-instructions").value = (familyRecipe.instructions || details.instructions || []).join("\n");
+  document.getElementById("family-version-note").value = familyRecipe.note || "";
   const categoryOptions = document.getElementById("family-version-category-options");
   categoryOptions.replaceChildren(...recipeCategoryKeys.map((category) => {
     const label = document.createElement("label");
@@ -598,25 +619,6 @@ async function openFamilyVersionDialog(details) {
     input.name = "recipe-category";
     label.append(input, document.createTextNode(labels[category]));
     return label;
-  }));
-  container.replaceChildren(...details.ingredients.map((ingredient) => {
-    const row = document.createElement("div");
-    row.className = "family-version-row";
-    const label = document.createElement("label");
-    label.textContent = ingredient;
-    const input = document.createElement("input");
-    input.value = saved.get(ingredient) || ingredient;
-    input.dataset.sourceIngredient = ingredient;
-    input.setAttribute("aria-label", `Wersja dla rodziny: ${ingredient}`);
-    row.append(label, input);
-    const rule = ruleForIngredient(rules, ingredient);
-    if (rule) {
-      const hint = document.createElement("p");
-      hint.className = "family-version-hint";
-      hint.textContent = `Podpowiedź Kasi: ${familyRuleMessage(ingredient, rule)}`;
-      row.append(hint);
-    }
-    return row;
   }));
   dialog.dataset.recipeId = details.id;
   dialog.showModal();
@@ -712,20 +714,23 @@ document.getElementById("family-version-form").addEventListener("submit", async 
   const recipeId = dialog.dataset.recipeId;
   const message = document.getElementById("family-version-message");
   if (!recipeId) return;
-  const familyIngredients = [...document.querySelectorAll("#family-version-ingredients input")]
-    .map((input) => ({ source: input.dataset.sourceIngredient, display: input.value.trim() }))
-    .filter((item) => item.display && item.display !== item.source);
+  const title = document.getElementById("family-version-recipe-title").value.trim();
+  const ingredients = document.getElementById("family-version-ingredients").value.split("\n").map((item) => item.trim()).filter(Boolean);
+  const instructions = document.getElementById("family-version-instructions").value.split("\n").map((item) => item.trim()).filter(Boolean);
+  const note = document.getElementById("family-version-note").value.trim();
   const categories = [...document.querySelectorAll("#family-version-category-options input:checked")].map((input) => input.value);
-  if (!categories.length) {
-    message.textContent = "Wybierz przynajmniej jedną kategorię.";
+  if (!title || !ingredients.length || !instructions.length || !categories.length) {
+    message.textContent = "Uzupełnij nazwę, składniki, przygotowanie oraz przynajmniej jedną kategorię.";
     return;
   }
   message.textContent = "Zapisuję wersję dla rodziny…";
   try {
     await setDoc(doc(db, "recipes", recipeId), {
-      familyIngredients,
+      familyRecipe: { title, ingredients, instructions, note },
       categories,
       category: categories[0],
+      familyReady: false,
+      needsRepublish: true,
       updatedBy: state.user.email,
       updatedAt: serverTimestamp()
     }, { merge: true });

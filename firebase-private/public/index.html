@@ -11,7 +11,7 @@
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
     <title>Przepisy rodzinne</title>
-    <link rel="stylesheet" href="style.css?v=20261124-text-back">
+    <link rel="stylesheet" href="style.css?v=20261124-family-editor">
   </head>
   <body>
     <main class="app">
@@ -127,14 +127,21 @@
       <article>
         <h2 id="family-version-title">Wersja dla rodziny</h2>
         <p id="family-version-recipe" class="product-rating"></p>
-        <p class="recipe-note">Zmień tylko te składniki, które Kasia chce inaczej podać w tym konkretnym przepisie. Nie zmieni to ogólnych podpowiedzi Kasi.</p>
+        <p class="recipe-note">Oryginalny przepis pozostaje w bazie. Tutaj Kasia przygotowuje prostą, końcową wersję widoczną po publikacji dla rodziny.</p>
         <form id="family-version-form">
+          <label for="family-version-recipe-title">Nazwa przepisu dla rodziny</label>
+          <input id="family-version-recipe-title" required autocomplete="off">
           <fieldset class="family-version-categories">
             <legend>W jakich kategoriach pokazać przepis?</legend>
             <p>Możesz zaznaczyć więcej niż jedną.</p>
             <div id="family-version-category-options"></div>
           </fieldset>
-          <div id="family-version-ingredients" class="family-version-ingredients"></div>
+          <label for="family-version-ingredients">Składniki dla rodziny</label>
+          <textarea id="family-version-ingredients" rows="8" required placeholder="Jeden składnik w każdym wierszu"></textarea>
+          <label for="family-version-instructions">Przygotowanie dla rodziny</label>
+          <textarea id="family-version-instructions" rows="8" required placeholder="Jeden krok w każdym wierszu"></textarea>
+          <label for="family-version-note">Wskazówka Kasi dla rodziny (opcjonalnie)</label>
+          <textarea id="family-version-note" rows="3" placeholder="np. Użyj bardzo świeżego kurczaka."></textarea>
           <p id="family-version-message" class="message" aria-live="polite"></p>
           <div class="dialog-actions">
             <button class="primary" type="submit">Zapisz wersję dla rodziny</button>
@@ -143,6 +150,6 @@
         </form>
       </article>
     </dialog>
-    <script type="module" src="app.js?v=20261124-role-view"></script>
+    <script type="module" src="app.js?v=20261124-family-editor"></script>
   </body>
 </html>
