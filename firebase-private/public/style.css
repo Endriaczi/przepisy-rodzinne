@@ -23,6 +23,7 @@ h1 { margin: 0; font-size: 1.5rem; }
 .portrait { display: grid; place-items: center; aspect-ratio: 1 / 1; text-align: center; background: #d9f1ef; color: #3f7478; line-height: 1.45; font-size: .9rem; background-position: center; background-repeat: no-repeat; background-size: contain; }
 .portrait.has-image { color: transparent; }
 .portrait-admin { display: grid; gap: 10px; margin-top: 6px; padding: 16px; border: 1px solid #b8dfdf; border-radius: 16px; background: #effbfa; }
+.portrait-admin[hidden] { display: none; }
 .portrait-admin p { margin: 0; }
 .secondary { display: block; border: 1px solid #007f87; border-radius: 12px; padding: 11px 14px; color: #007f87; font-weight: 650; text-align: center; cursor: pointer; }
 .topbar { display: flex; align-items: center; gap: 14px; min-height: 52px; margin-bottom: 28px; }
