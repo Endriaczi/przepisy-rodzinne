@@ -1,0 +1,19 @@
+{
+  "name": "Przepisy rodzinne",
+  "short_name": "Przepisy",
+  "description": "Prywatna wyszukiwarka przepisów dla rodziny.",
+  "lang": "pl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#e6f7f6",
+  "theme_color": "#007f87",
+  "icons": [
+    {
+      "src": "app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

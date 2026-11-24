@@ -14,6 +14,14 @@ const labels = { emilka: "Emilka", kasia: "Kasia", sniadanie: "Śniadanie", obia
 const recipeCategoryKeys = ["sniadanie", "obiad", "kolacja_przekaska"];
 const histamineSourceUrl = "https://raw.githubusercontent.com/Endriaczi/Histamina/main/script0.js";
 
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("service-worker.js").catch(() => {
+      // Aplikacja nadal działa online, jeżeli przeglądarka nie obsługuje PWA.
+    });
+  });
+}
+
 const show = (screen) => document.querySelectorAll(".screen").forEach((item) => item.classList.toggle("hidden", item.id !== `${screen}-screen`));
 const setLoginMessage = (text) => { document.getElementById("login-message").textContent = text; };
 const normalize = (text) => text.toLocaleLowerCase("pl-PL").trim();
