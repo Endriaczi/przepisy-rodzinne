@@ -99,6 +99,18 @@
         </div>
       </article>
     </dialog>
+    <dialog id="publish-dialog" class="review-dialog" aria-labelledby="publish-dialog-title">
+      <article>
+        <h2 id="publish-dialog-title">Sprawdzenie przed publikacją</h2>
+        <p id="publish-dialog-recipe" class="product-rating"></p>
+        <ul id="publish-dialog-checks" class="publish-checks"></ul>
+        <label class="publish-confirm"><input id="publish-dialog-confirmation" type="checkbox"> Potwierdzam, że przepis jest gotowy dla rodziny.</label>
+        <div class="dialog-actions">
+          <button id="publish-dialog-confirm" class="primary" type="button" disabled>Opublikuj rodzinie</button>
+          <button id="publish-dialog-back" class="secondary" type="button">Wróć do opracowania</button>
+        </div>
+      </article>
+    </dialog>
     <script type="module" src="app.js?v=20261124-family-ready-recipes"></script>
   </body>
 </html>

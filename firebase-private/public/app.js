@@ -173,15 +173,16 @@ function evaluateRecipeFor(person, recipe, products, familyRules) {
 }
 
 const reviewLabels = { approved: "Dopuszczone", excluded: "Wykluczone", check: "Wymaga sprawdzenia" };
-function reviewControls(recipeId, canApprove = true, reasons = [], ingredients = []) {
+function reviewControls(recipeId, canApprove = true, reasons = [], ingredients = [], title = "") {
   if (!["admin", "reviewer"].includes(state.role)) return "";
   const encodedDetails = encodeURIComponent(JSON.stringify({
     recipeId,
+    title,
     reasons: reasons.length ? reasons : ["Ten przepis wymaga sprawdzenia przez Kasię."],
     ingredients
   }));
   return `<div class="review-actions">
-    ${canApprove ? `<button type="button" data-review="approved" data-recipe-id="${recipeId}">Opublikuj</button>` : ""}
+    ${canApprove ? `<button type="button" data-review="approved" data-recipe-id="${recipeId}" data-publish-details="${encodedDetails}">Opublikuj</button>` : ""}
     <button type="button" data-review="check" data-recipe-id="${recipeId}" data-review-details="${encodedDetails}">Sprawdź</button>
     <button type="button" data-review="excluded" data-recipe-id="${recipeId}">Nie publikuj</button>
   </div>`;
@@ -199,7 +200,7 @@ function recipeCard(recipe, evaluation, review) {
   ].filter(Boolean).join("");
   const recipeStatus = review?.status === "approved" ? "Dopuszczony przez Kasię" : "Wymaga oceny Kasi";
   const time = recipe.timeMinutes ? `<span>${recipe.timeMinutes} min</span>` : "";
-  const controls = reviewControls(recipe.id, true, evaluation.warnings || [], recipe.ingredients);
+  const controls = reviewControls(recipe.id, true, evaluation.warnings || [], recipe.ingredients, recipe.title);
   const editorView = isReviewer();
   return `<article class="recipe-card">
     <div class="recipe-card__top"><h2>${escapeHtml(recipe.title)}</h2>${time}</div>
@@ -216,7 +217,7 @@ function recipeCard(recipe, evaluation, review) {
 
 function reviewQueue(items) {
   if (!["admin", "reviewer"].includes(state.role) || !items.length) return "";
-  const cards = items.map(({ recipe, evaluation }) => `<li><b>${recipe.title}</b><br>${evaluation.reasons.join("; ")}${reviewControls(recipe.id, evaluation.canOverride, evaluation.reasons, recipe.ingredients)}</li>`).join("");
+  const cards = items.map(({ recipe, evaluation }) => `<li><b>${recipe.title}</b><br>${evaluation.reasons.join("; ")}${reviewControls(recipe.id, evaluation.canOverride, evaluation.reasons, recipe.ingredients, recipe.title)}</li>`).join("");
   return `<details class="admin-diagnostics"><summary>Przepisy wymagające oceny (${items.length})</summary><ul>${cards}</ul></details>`;
 }
 
@@ -463,7 +464,43 @@ function openReviewDialog(details) {
     return item;
   }));
   document.getElementById("review-dialog").dataset.recipeId = details.recipeId || "";
+  document.getElementById("review-dialog").dataset.publishDetails = encodeURIComponent(JSON.stringify(details));
   document.getElementById("review-dialog").showModal();
+}
+
+function openPublishDialog(details) {
+  const dialog = document.getElementById("publish-dialog");
+  const checks = document.getElementById("publish-dialog-checks");
+  const confirmation = document.getElementById("publish-dialog-confirmation");
+  document.getElementById("publish-dialog-recipe").textContent = details.title || "Wybrany przepis";
+  checks.replaceChildren();
+  const addCheck = (text, attention = false) => {
+    const item = document.createElement("li");
+    item.textContent = text;
+    if (attention) item.classList.add("needs-attention");
+    checks.append(item);
+  };
+  addCheck(`Składniki w przepisie: ${(details.ingredients || []).length}.`);
+  if (details.reasons?.length) details.reasons.forEach((reason) => addCheck(`Wymaga świadomej decyzji Kasi: ${reason}`, true));
+  else addCheck("Nie wykryto automatycznych wątpliwości wymagających decyzji.");
+  addCheck("Przed publikacją potwierdź, że zamienniki i warunki są już gotowe dla rodziny.");
+  confirmation.checked = false;
+  document.getElementById("publish-dialog-confirm").disabled = true;
+  dialog.dataset.recipeId = details.recipeId || "";
+  dialog.showModal();
+}
+
+async function publishRecipe(recipeId) {
+  await setDoc(doc(db, "recipeReviews", recipeId), {
+    status: "approved",
+    reviewedBy: state.user.email,
+    reviewedAt: serverTimestamp()
+  });
+  await setDoc(doc(db, "recipes", recipeId), {
+    familyReady: true,
+    publishedBy: state.user.email,
+    publishedAt: serverTimestamp()
+  }, { merge: true });
 }
 
 document.getElementById("review-dialog").addEventListener("click", async (event) => {
@@ -478,6 +515,10 @@ document.getElementById("recipe-list").addEventListener("click", async (event) =
   if (!button || !["admin", "reviewer"].includes(state.role)) return;
   if (button.dataset.review === "check") {
     openReviewDialog(JSON.parse(decodeURIComponent(button.dataset.reviewDetails || "{}")));
+    return;
+  }
+  if (button.dataset.review === "approved") {
+    openPublishDialog(JSON.parse(decodeURIComponent(button.dataset.publishDetails || "{}")));
     return;
   }
   button.disabled = true;
@@ -504,6 +545,11 @@ document.getElementById("review-dialog-actions").addEventListener("click", async
   const dialog = document.getElementById("review-dialog");
   const recipeId = dialog.dataset.recipeId;
   if (!recipeId) return;
+  if (button.dataset.dialogReview === "approved") {
+    dialog.close();
+    openPublishDialog(JSON.parse(decodeURIComponent(dialog.dataset.publishDetails || "{}")));
+    return;
+  }
   button.disabled = true;
   try {
     await setDoc(doc(db, "recipeReviews", recipeId), {
@@ -520,6 +566,23 @@ document.getElementById("review-dialog-actions").addEventListener("click", async
     await searchRecipes();
   } finally {
     button.disabled = false;
+  }
+});
+document.getElementById("publish-dialog-confirmation").addEventListener("change", (event) => {
+  document.getElementById("publish-dialog-confirm").disabled = !event.target.checked;
+});
+document.getElementById("publish-dialog-back").addEventListener("click", () => document.getElementById("publish-dialog").close());
+document.getElementById("publish-dialog-confirm").addEventListener("click", async (event) => {
+  const dialog = document.getElementById("publish-dialog");
+  const recipeId = dialog.dataset.recipeId;
+  if (!recipeId) return;
+  event.target.disabled = true;
+  try {
+    await publishRecipe(recipeId);
+    dialog.close();
+    await searchRecipes();
+  } finally {
+    event.target.disabled = false;
   }
 });
 document.getElementById("seed-recipes").addEventListener("click", async () => {
