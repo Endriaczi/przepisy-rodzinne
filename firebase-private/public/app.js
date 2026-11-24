@@ -23,6 +23,11 @@ if ("serviceWorker" in navigator) {
 }
 
 const show = (screen) => document.querySelectorAll(".screen").forEach((item) => item.classList.toggle("hidden", item.id !== `${screen}-screen`));
+function setResultsBack(screen, label) {
+  const button = document.querySelector("#results-screen [data-back]");
+  button.dataset.back = screen;
+  button.textContent = label;
+}
 const setLoginMessage = (text) => { document.getElementById("login-message").textContent = text; };
 const normalize = (text) => text.toLocaleLowerCase("pl-PL").trim();
 const foldText = (text) => (text || "").toLowerCase().normalize("NFD")
@@ -486,6 +491,7 @@ document.getElementById("queue-list").addEventListener("click", async (event) =>
   state.person = "emilka";
   state.category = button.dataset.queueCategory;
   state.queueRecipeId = button.dataset.queueRecipeId;
+  setResultsBack("queue", "Wróć do kolejki");
   document.getElementById("results-title").textContent = "Opracowanie przepisu";
   document.getElementById("result-summary").textContent = `Emilka · ${labels[state.category]}`;
   show("results");
@@ -905,8 +911,16 @@ document.querySelectorAll(".category").forEach((button) => button.addEventListen
   document.getElementById("show-results").disabled = false;
 }));
 document.getElementById("show-results").addEventListener("click", async () => {
+  setResultsBack("search", "Zmień wybór");
   document.getElementById("result-summary").textContent = `${labels[state.person]} · ${labels[state.category]}`;
   show("results");
   await searchRecipes();
 });
-document.querySelectorAll("[data-back]").forEach((button) => button.addEventListener("click", () => show(button.dataset.back)));
+document.querySelectorAll("[data-back]").forEach((button) => button.addEventListener("click", async () => {
+  if (button.dataset.back === "queue") {
+    show("queue");
+    await renderReviewQueue();
+    return;
+  }
+  show(button.dataset.back);
+}));
