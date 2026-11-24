@@ -231,6 +231,15 @@ function recipeCard(recipe, evaluation, review) {
     note: recipe.note || "",
     categories: recipeCategories(recipe)
   }));
+  const familyPreview = recipe.familyRecipe ? encodeURIComponent(JSON.stringify({
+    recipeId: recipe.id,
+    title: recipe.familyRecipe.title,
+    categories: recipeCategories(recipe),
+    ingredients: recipe.familyRecipe.ingredients,
+    instructions: recipe.familyRecipe.instructions,
+    note: recipe.familyRecipe.note || "",
+    reasons: evaluation.warnings || []
+  })) : "";
   return `<article class="recipe-card">
     <div class="recipe-card__top"><h2>${escapeHtml(recipe.title)}</h2>${time}</div>
     ${editorView ? `<p class="review">${recipeStatus}</p>` : ""}
@@ -241,7 +250,7 @@ function recipeCard(recipe, evaluation, review) {
     <details><summary>Składniki</summary><ul>${ingredients}</ul></details>
     ${instructions ? `<details><summary>Przygotowanie</summary><ol>${instructions}</ol></details>` : ""}
     ${editorView ? (recipe.sourceUrl ? `<p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(recipe.publisher)}</a></p>` : `<p class="recipe-source">Źródło: ${escapeHtml(recipe.sourceLabel || recipe.publisher || "Prywatna biblioteka rodzinna")}</p>`) : ""}
-    ${editorView ? `<button class="family-version-button" type="button" data-family-version="${familyVersion}">Edytuj wersję dla rodziny</button>` : ""}
+    ${editorView ? `<button class="family-version-button" type="button" data-family-version="${familyVersion}">Edytuj wersję dla rodziny</button>${familyPreview ? `<button class="family-preview-button" type="button" data-family-preview="${familyPreview}">Podgląd dla rodziny</button>` : ""}` : ""}
     ${editorView ? controls : ""}
   </article>`;
 }
@@ -624,7 +633,33 @@ async function openFamilyVersionDialog(details) {
   dialog.showModal();
 }
 
+function openFamilyPreviewDialog(details) {
+  const dialog = document.getElementById("family-preview-dialog");
+  document.getElementById("family-preview-categories").textContent = details.categories.map((category) => labels[category]).join(" · ");
+  document.getElementById("family-preview-recipe-title").textContent = details.title;
+  document.getElementById("family-preview-ingredients").replaceChildren(...details.ingredients.map((ingredient) => {
+    const item = document.createElement("li");
+    item.textContent = ingredient;
+    return item;
+  }));
+  document.getElementById("family-preview-instructions").replaceChildren(...details.instructions.map((instruction) => {
+    const item = document.createElement("li");
+    item.textContent = instruction;
+    return item;
+  }));
+  const note = document.getElementById("family-preview-note");
+  note.textContent = details.note ? `Wskazówka Kasi: ${details.note}` : "";
+  note.hidden = !details.note;
+  dialog.dataset.publishDetails = encodeURIComponent(JSON.stringify(details));
+  dialog.showModal();
+}
+
 document.getElementById("recipe-list").addEventListener("click", async (event) => {
+  const familyPreviewButton = event.target.closest("button[data-family-preview]");
+  if (familyPreviewButton && isReviewer()) {
+    openFamilyPreviewDialog(JSON.parse(decodeURIComponent(familyPreviewButton.dataset.familyPreview || "{}")));
+    return;
+  }
   const familyVersionButton = event.target.closest("button[data-family-version]");
   if (familyVersionButton && isReviewer()) {
     await openFamilyVersionDialog(JSON.parse(decodeURIComponent(familyVersionButton.dataset.familyVersion || "{}")));
@@ -708,6 +743,12 @@ document.getElementById("publish-dialog-confirm").addEventListener("click", asyn
   }
 });
 document.getElementById("family-version-close").addEventListener("click", () => document.getElementById("family-version-dialog").close());
+document.getElementById("family-preview-close").addEventListener("click", () => document.getElementById("family-preview-dialog").close());
+document.getElementById("family-preview-publish").addEventListener("click", () => {
+  const dialog = document.getElementById("family-preview-dialog");
+  dialog.close();
+  openPublishDialog(JSON.parse(decodeURIComponent(dialog.dataset.publishDetails || "{}")));
+});
 document.getElementById("family-version-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const dialog = document.getElementById("family-version-dialog");

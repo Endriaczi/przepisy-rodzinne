@@ -11,7 +11,7 @@
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
     <title>Przepisy rodzinne</title>
-    <link rel="stylesheet" href="style.css?v=20261124-family-editor">
+    <link rel="stylesheet" href="style.css?v=20261125-family-preview">
   </head>
   <body>
     <main class="app">
@@ -150,6 +150,26 @@
         </form>
       </article>
     </dialog>
-    <script type="module" src="app.js?v=20261124-family-editor"></script>
+    <dialog id="family-preview-dialog" class="review-dialog" aria-labelledby="family-preview-title">
+      <article>
+        <h2 id="family-preview-title">Podgląd dla rodziny</h2>
+        <p id="family-preview-categories" class="product-rating"></p>
+        <h3 id="family-preview-recipe-title"></h3>
+        <section class="family-preview-section">
+          <h4>Składniki</h4>
+          <ul id="family-preview-ingredients"></ul>
+        </section>
+        <section class="family-preview-section">
+          <h4>Przygotowanie</h4>
+          <ol id="family-preview-instructions"></ol>
+        </section>
+        <p id="family-preview-note" class="family-note" hidden></p>
+        <div class="dialog-actions">
+          <button id="family-preview-publish" class="primary" type="button">Przejdź do publikacji</button>
+          <button id="family-preview-close" class="secondary" type="button">Wróć do opracowania</button>
+        </div>
+      </article>
+    </dialog>
+    <script type="module" src="app.js?v=20261125-family-preview"></script>
   </body>
 </html>
