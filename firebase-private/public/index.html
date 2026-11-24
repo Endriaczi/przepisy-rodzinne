@@ -62,7 +62,7 @@
 
       <section id="rules-screen" class="screen hidden" aria-labelledby="rules-title">
         <header class="topbar"><button class="back" data-back="people" aria-label="Wróć">←</button><h1 id="rules-title">Ustalenia Kasi dla Emilki</h1></header>
-        <p class="message">Kasia określa tu dopuszczenie, warunki i zamienniki zgodnie z ustaleniami z dietetykiem.</p>
+        <p class="message">Kasia określa tu edytowalne podpowiedzi dotyczące dopuszczenia, warunków i zamienników. W konkretnym przepisie może wybrać inną wersję.</p>
         <form id="ingredient-rule-form" class="rule-form">
           <label for="rule-ingredient">Składnik z przepisu</label>
           <input id="rule-ingredient" required autocomplete="off" placeholder="np. masło">
@@ -111,6 +111,21 @@
         </div>
       </article>
     </dialog>
-    <script type="module" src="app.js?v=20261124-kasia-suggestions"></script>
+    <dialog id="family-version-dialog" class="review-dialog" aria-labelledby="family-version-title">
+      <article>
+        <h2 id="family-version-title">Wersja dla rodziny</h2>
+        <p id="family-version-recipe" class="product-rating"></p>
+        <p class="recipe-note">Zmień tylko te składniki, które Kasia chce inaczej podać w tym konkretnym przepisie. Nie zmieni to ogólnych podpowiedzi Kasi.</p>
+        <form id="family-version-form">
+          <div id="family-version-ingredients" class="family-version-ingredients"></div>
+          <p id="family-version-message" class="message" aria-live="polite"></p>
+          <div class="dialog-actions">
+            <button class="primary" type="submit">Zapisz wersję dla rodziny</button>
+            <button id="family-version-close" class="secondary" type="button">Wróć</button>
+          </div>
+        </form>
+      </article>
+    </dialog>
+    <script type="module" src="app.js?v=20261124-editable-suggestions"></script>
   </body>
 </html>

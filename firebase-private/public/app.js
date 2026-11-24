@@ -112,15 +112,10 @@ function familyRuleMessage(ingredient, rule) {
 
 function recipeForFamily(recipe, rules) {
   if (state.person !== "emilka") return recipe;
+  const replacements = new Map((recipe.familyIngredients || []).map((item) => [item.source, item.display]));
   return {
     ...recipe,
-    ingredients: recipe.ingredients.map((ingredient) => {
-      const rule = ruleForIngredient(rules, ingredient);
-      if (!rule) return ingredient;
-      if (rule.status === "substitute" && rule.replacement) return rule.replacement;
-      if (rule.status === "conditional" && rule.note) return `${ingredient} (${rule.note})`;
-      return ingredient;
-    })
+    ingredients: recipe.ingredients.map((ingredient) => replacements.get(ingredient) || ingredient)
   };
 }
 
@@ -198,6 +193,12 @@ function recipeCard(recipe, evaluation, review) {
   const time = recipe.timeMinutes ? `<span>${recipe.timeMinutes} min</span>` : "";
   const controls = reviewControls(recipe.id, true, evaluation.warnings || [], recipe.ingredients, recipe.title);
   const editorView = isReviewer();
+  const familyVersion = encodeURIComponent(JSON.stringify({
+    id: recipe.id,
+    title: recipe.title,
+    ingredients: recipe.ingredients,
+    familyIngredients: recipe.familyIngredients || []
+  }));
   return `<article class="recipe-card">
     <div class="recipe-card__top"><h2>${escapeHtml(recipe.title)}</h2>${time}</div>
     ${editorView ? `<p class="review">${recipeStatus}</p>` : ""}
@@ -207,6 +208,7 @@ function recipeCard(recipe, evaluation, review) {
     <details><summary>Składniki</summary><ul>${ingredients}</ul></details>
     ${instructions ? `<details><summary>Przygotowanie</summary><ol>${instructions}</ol></details>` : ""}
     ${editorView ? (recipe.sourceUrl ? `<p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(recipe.publisher)}</a></p>` : `<p class="recipe-source">Źródło: ${escapeHtml(recipe.sourceLabel || recipe.publisher || "Prywatna biblioteka rodzinna")}</p>`) : ""}
+    ${editorView ? `<button class="family-version-button" type="button" data-family-version="${familyVersion}">Edytuj wersję dla rodziny</button>` : ""}
     ${editorView ? controls : ""}
   </article>`;
 }
@@ -506,7 +508,42 @@ document.getElementById("review-dialog").addEventListener("click", async (event)
   await openRulesScreen("results", button.dataset.ruleIngredient);
 });
 
+async function openFamilyVersionDialog(details) {
+  const dialog = document.getElementById("family-version-dialog");
+  const container = document.getElementById("family-version-ingredients");
+  const rules = await getIngredientRules();
+  const saved = new Map((details.familyIngredients || []).map((item) => [item.source, item.display]));
+  document.getElementById("family-version-recipe").textContent = details.title;
+  document.getElementById("family-version-message").textContent = "";
+  container.replaceChildren(...details.ingredients.map((ingredient) => {
+    const row = document.createElement("div");
+    row.className = "family-version-row";
+    const label = document.createElement("label");
+    label.textContent = ingredient;
+    const input = document.createElement("input");
+    input.value = saved.get(ingredient) || ingredient;
+    input.dataset.sourceIngredient = ingredient;
+    input.setAttribute("aria-label", `Wersja dla rodziny: ${ingredient}`);
+    row.append(label, input);
+    const rule = ruleForIngredient(rules, ingredient);
+    if (rule) {
+      const hint = document.createElement("p");
+      hint.className = "family-version-hint";
+      hint.textContent = `Podpowiedź Kasi: ${familyRuleMessage(ingredient, rule)}`;
+      row.append(hint);
+    }
+    return row;
+  }));
+  dialog.dataset.recipeId = details.id;
+  dialog.showModal();
+}
+
 document.getElementById("recipe-list").addEventListener("click", async (event) => {
+  const familyVersionButton = event.target.closest("button[data-family-version]");
+  if (familyVersionButton && isReviewer()) {
+    await openFamilyVersionDialog(JSON.parse(decodeURIComponent(familyVersionButton.dataset.familyVersion || "{}")));
+    return;
+  }
   const button = event.target.closest("button[data-review]");
   if (!button || !["admin", "reviewer"].includes(state.role)) return;
   if (button.dataset.review === "check") {
@@ -579,6 +616,25 @@ document.getElementById("publish-dialog-confirm").addEventListener("click", asyn
     await searchRecipes();
   } finally {
     event.target.disabled = false;
+  }
+});
+document.getElementById("family-version-close").addEventListener("click", () => document.getElementById("family-version-dialog").close());
+document.getElementById("family-version-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const dialog = document.getElementById("family-version-dialog");
+  const recipeId = dialog.dataset.recipeId;
+  const message = document.getElementById("family-version-message");
+  if (!recipeId) return;
+  const familyIngredients = [...document.querySelectorAll("#family-version-ingredients input")]
+    .map((input) => ({ source: input.dataset.sourceIngredient, display: input.value.trim() }))
+    .filter((item) => item.display && item.display !== item.source);
+  message.textContent = "Zapisuję wersję dla rodziny…";
+  try {
+    await setDoc(doc(db, "recipes", recipeId), { familyIngredients, updatedBy: state.user.email, updatedAt: serverTimestamp() }, { merge: true });
+    dialog.close();
+    await searchRecipes();
+  } catch {
+    message.textContent = "Nie udało się zapisać wersji dla rodziny.";
   }
 });
 document.getElementById("seed-recipes").addEventListener("click", async () => {
