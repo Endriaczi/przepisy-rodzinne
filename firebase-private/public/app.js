@@ -24,6 +24,7 @@ const caseinTerms = ["mleko", "maslo", "jogurt", "ser", "smiet", "twarog", "rico
 const saltTerms = ["sol", "sol morska", "salt"];
 const ratingLabels = { "0": "DOBRZE TOLEROWANE", "1": "UMIARKOWANA", "2": "NIEZGODNE", "3": "BARDZO ŹLE", "?": "BRAK DANYCH" };
 const ruleStatusLabels = { allowed: "Dopuszczony", conditional: "Dopuszczony warunkowo", substitute: "Zamień na", excluded: "Nie używamy" };
+const isReviewer = () => ["admin", "reviewer"].includes(state.role);
 
 function words(text) {
   return foldText(text).split(" ").filter(Boolean).map((word) => eggWords.includes(word) ? "jajko" : word);
@@ -109,6 +110,20 @@ function familyRuleMessage(ingredient, rule) {
   return `${ingredient} — nie używamy${note}`;
 }
 
+function recipeForFamily(recipe, rules) {
+  if (state.person !== "emilka") return recipe;
+  return {
+    ...recipe,
+    ingredients: recipe.ingredients.map((ingredient) => {
+      const rule = ruleForIngredient(rules, ingredient);
+      if (!rule) return ingredient;
+      if (rule.status === "substitute" && rule.replacement) return rule.replacement;
+      if (rule.status === "conditional" && rule.note) return `${ingredient} (${rule.note})`;
+      return ingredient;
+    })
+  };
+}
+
 function evaluateRecipeFor(person, recipe, products, familyRules) {
   if (person === "kasia") {
     const gluten = recipe.ingredients.filter((ingredient) =>
@@ -166,9 +181,9 @@ function reviewControls(recipeId, canApprove = true, reasons = [], ingredients =
     ingredients
   }));
   return `<div class="review-actions">
-    ${canApprove ? `<button type="button" data-review="approved" data-recipe-id="${recipeId}">Dopuść</button>` : ""}
+    ${canApprove ? `<button type="button" data-review="approved" data-recipe-id="${recipeId}">Opublikuj</button>` : ""}
     <button type="button" data-review="check" data-recipe-id="${recipeId}" data-review-details="${encodedDetails}">Sprawdź</button>
-    <button type="button" data-review="excluded" data-recipe-id="${recipeId}">Wyklucz</button>
+    <button type="button" data-review="excluded" data-recipe-id="${recipeId}">Nie publikuj</button>
   </div>`;
 }
 
@@ -185,16 +200,17 @@ function recipeCard(recipe, evaluation, review) {
   const recipeStatus = review?.status === "approved" ? "Dopuszczony przez Kasię" : "Wymaga oceny Kasi";
   const time = recipe.timeMinutes ? `<span>${recipe.timeMinutes} min</span>` : "";
   const controls = reviewControls(recipe.id, true, evaluation.warnings || [], recipe.ingredients);
+  const editorView = isReviewer();
   return `<article class="recipe-card">
     <div class="recipe-card__top"><h2>${escapeHtml(recipe.title)}</h2>${time}</div>
-    <p class="review">${recipeStatus}</p>
-    ${evaluation.warnings?.length ? `<section class="ingredient-alert"><span>Składniki wymagające uwagi</span><p>${evaluation.warnings.map(escapeHtml).join("<br>")}</p></section>` : ""}
-    ${kasiaItems ? `<section class="kasia-assessment"><span>Ustalenia Kasi dla Emilki</span><ul>${kasiaItems}</ul></section>` : ""}
-    ${note ? `<p class="recipe-note">${escapeHtml(note)}</p>` : ""}
+    ${editorView ? `<p class="review">${recipeStatus}</p>` : ""}
+    ${editorView && evaluation.warnings?.length ? `<section class="ingredient-alert"><span>Składniki wymagające uwagi</span><p>${evaluation.warnings.map(escapeHtml).join("<br>")}</p></section>` : ""}
+    ${editorView && kasiaItems ? `<section class="kasia-assessment"><span>Ustalenia Kasi dla Emilki</span><ul>${kasiaItems}</ul></section>` : ""}
+    ${editorView && note ? `<p class="recipe-note">${escapeHtml(note)}</p>` : ""}
     <details><summary>Składniki</summary><ul>${ingredients}</ul></details>
     ${instructions ? `<details><summary>Przygotowanie</summary><ol>${instructions}</ol></details>` : ""}
-    ${recipe.sourceUrl ? `<p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(recipe.publisher)}</a></p>` : `<p class="recipe-source">Źródło: ${escapeHtml(recipe.sourceLabel || recipe.publisher || "Prywatna biblioteka rodzinna")}</p>`}
-    ${controls}
+    ${editorView ? (recipe.sourceUrl ? `<p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(recipe.publisher)}</a></p>` : `<p class="recipe-source">Źródło: ${escapeHtml(recipe.sourceLabel || recipe.publisher || "Prywatna biblioteka rodzinna")}</p>`) : ""}
+    ${editorView ? controls : ""}
   </article>`;
 }
 
@@ -214,15 +230,24 @@ async function searchRecipes() {
   list.className = "empty";
   list.textContent = "Szukam przepisów…";
   try {
-    const snapshot = await getDocs(query(collection(db, "recipes"), where("category", "==", state.category)));
+    const recipeQuery = isReviewer()
+      ? query(collection(db, "recipes"), where("category", "==", state.category))
+      : query(collection(db, "recipes"), where("familyReady", "==", true));
+    const snapshot = await getDocs(recipeQuery);
     const phrase = normalize(document.getElementById("ingredient").value);
     const found = snapshot.docs.map((item) => item.data()).filter((recipe) =>
-      !phrase || recipe.ingredients.some((ingredient) => ingredientMatchesPhrase(ingredient, phrase))
+      recipe.category === state.category && (!phrase || recipe.ingredients.some((ingredient) => ingredientMatchesPhrase(ingredient, phrase)))
     );
-    const products = state.person === "emilka" ? await getHistamineProducts() : [];
+    const products = isReviewer() && state.person === "emilka" ? await getHistamineProducts() : [];
     const familyRules = state.person === "emilka" ? await getIngredientRules() : [];
-    const reviews = await getRecipeReviews();
+    const reviews = isReviewer() ? await getRecipeReviews() : {};
     const evaluated = found.map((recipe) => {
+      if (!isReviewer()) return {
+        recipe,
+        displayRecipe: recipeForFamily(recipe, familyRules),
+        evaluation: { visible: true, warnings: [], familyNotes: [] },
+        review: null
+      };
       const evaluation = evaluateRecipeFor(state.person, recipe, products, familyRules);
       const review = reviews[recipe.id];
       if (review?.status === "excluded") return { recipe, evaluation: { visible: false, canOverride: false, reasons: ["wykluczony decyzją Kasi"] }, review };
@@ -233,7 +258,9 @@ async function searchRecipes() {
     });
     const recipes = evaluated.filter((item) => item.evaluation.visible).sort((left, right) => left.recipe.title.localeCompare(right.recipe.title, "pl"));
     if (!recipes.length) {
-      const baseMessage = phrase
+      const baseMessage = !isReviewer()
+        ? "Kasia nie opublikowała jeszcze gotowego przepisu w tej kategorii."
+        : phrase
         ? "Nie znaleziono przepisu z tym składnikiem w tej kategorii."
         : "W tej kategorii nie ma jeszcze przepisów testowych.";
       if (state.person === "emilka" && found.length) {
@@ -254,7 +281,7 @@ async function searchRecipes() {
     list.className = "recipe-list";
     const excluded = evaluated.length - recipes.length;
     const reviewItems = evaluated.filter((item) => !item.evaluation.visible);
-    list.innerHTML = `${state.person === "emilka" && excluded ? `<p class="filter-note">Ukryto ${excluded} przepisów niespełniających zasad Emilki.</p>` : ""}${recipes.map((item) => recipeCard(item.recipe, item.evaluation, item.review)).join("")}${reviewQueue(reviewItems)}`;
+    list.innerHTML = `${isReviewer() && state.person === "emilka" && excluded ? `<p class="filter-note">Ukryto ${excluded} przepisów niespełniających zasad Emilki.</p>` : ""}${recipes.map((item) => recipeCard(item.displayRecipe || item.recipe, item.evaluation, item.review)).join("")}${reviewQueue(reviewItems)}`;
   } catch {
     list.className = "empty";
     list.textContent = "Nie udało się pobrać prywatnej bazy. Spróbuj ponownie.";
@@ -460,6 +487,11 @@ document.getElementById("recipe-list").addEventListener("click", async (event) =
       reviewedBy: state.user.email,
       reviewedAt: serverTimestamp()
     });
+    await setDoc(doc(db, "recipes", button.dataset.recipeId), {
+      familyReady: button.dataset.review === "approved",
+      publishedBy: state.user.email,
+      publishedAt: serverTimestamp()
+    }, { merge: true });
     await searchRecipes();
   } finally {
     button.disabled = false;
@@ -479,6 +511,11 @@ document.getElementById("review-dialog-actions").addEventListener("click", async
       reviewedBy: state.user.email,
       reviewedAt: serverTimestamp()
     });
+    await setDoc(doc(db, "recipes", recipeId), {
+      familyReady: button.dataset.dialogReview === "approved",
+      publishedBy: state.user.email,
+      publishedAt: serverTimestamp()
+    }, { merge: true });
     dialog.close();
     await searchRecipes();
   } finally {

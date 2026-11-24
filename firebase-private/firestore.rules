@@ -26,8 +26,11 @@ service cloud.firestore {
     }
 
     match /recipes/{recipeId} {
-      allow read: if isAllowedFamilyMember();
-      allow create, update, delete: if isAdministrator();
+      allow read: if canReviewRecipes() ||
+        (isAllowedFamilyMember() && resource.data.familyReady == true);
+      allow create: if isAdministrator();
+      allow update: if canReviewRecipes();
+      allow delete: if isAdministrator();
     }
 
     match /histamineProducts/{productId} {
@@ -36,7 +39,7 @@ service cloud.firestore {
     }
 
     match /recipeReviews/{recipeId} {
-      allow read: if isAllowedFamilyMember();
+      allow read: if canReviewRecipes();
       allow create, update: if canReviewRecipes();
       allow delete: if isAdministrator();
     }
