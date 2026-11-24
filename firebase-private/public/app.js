@@ -194,10 +194,6 @@ function recipeCard(recipe, evaluation, review) {
   const rawNote = recipe.note || "Sprawdź składniki przed przygotowaniem.";
   const note = /obsługiwane przez zasadę rodzinną|obsługiwane przez ustalenie dietetyczne/i.test(rawNote) ? "" : rawNote;
   const familyNotes = (evaluation.familyNotes || []).map(escapeHtml).join("<br>");
-  const kasiaItems = [
-    review?.status ? `<li><b>Przepis:</b> ${reviewLabels[review.status]}</li>` : "",
-    ...(familyNotes ? [`<li>${familyNotes.replaceAll("<br>", "</li><li>")}</li>`] : [])
-  ].filter(Boolean).join("");
   const recipeStatus = review?.status === "approved" ? "Dopuszczony przez Kasię" : "Wymaga oceny Kasi";
   const time = recipe.timeMinutes ? `<span>${recipe.timeMinutes} min</span>` : "";
   const controls = reviewControls(recipe.id, true, evaluation.warnings || [], recipe.ingredients, recipe.title);
@@ -205,8 +201,8 @@ function recipeCard(recipe, evaluation, review) {
   return `<article class="recipe-card">
     <div class="recipe-card__top"><h2>${escapeHtml(recipe.title)}</h2>${time}</div>
     ${editorView ? `<p class="review">${recipeStatus}</p>` : ""}
-    ${editorView && evaluation.warnings?.length ? `<section class="ingredient-alert"><span>Składniki wymagające uwagi</span><p>${evaluation.warnings.map(escapeHtml).join("<br>")}</p></section>` : ""}
-    ${editorView && kasiaItems ? `<section class="kasia-assessment"><span>Ustalenia Kasi dla Emilki</span><ul>${kasiaItems}</ul></section>` : ""}
+    ${editorView && evaluation.warnings?.length ? `<section class="ingredient-alert"><span>Do sprawdzenia przed decyzją Kasi</span><p>${evaluation.warnings.map(escapeHtml).join("<br>")}</p></section>` : ""}
+    ${editorView && familyNotes ? `<section class="kasia-assessment"><span>Podpowiedzi dla Kasi</span><p>Na podstawie wcześniejszych ustaleń:</p><ul><li>${familyNotes.replaceAll("<br>", "</li><li>")}</li></ul></section>` : ""}
     ${editorView && note ? `<p class="recipe-note">${escapeHtml(note)}</p>` : ""}
     <details><summary>Składniki</summary><ul>${ingredients}</ul></details>
     ${instructions ? `<details><summary>Przygotowanie</summary><ol>${instructions}</ol></details>` : ""}
