@@ -91,6 +91,13 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
 .publish-confirm input { width: 20px; min-height: 20px; margin: 0; }
 .family-version-button { width: 100%; margin-top: 12px; min-height: 45px; border: 1px solid #83c7c7; border-radius: 11px; background: transparent; color: #0b626b; font-weight: 750; }
 .family-preview-button { width: 100%; margin-top: 8px; min-height: 45px; border: 0; border-radius: 11px; background: #e0f5f3; color: #0b626b; font-weight: 750; }
+.workflow-step { margin-top: 16px; padding: 13px; border: 1px solid #83c7c7; border-radius: 13px; background: #effbfa; }
+.workflow-step > span { display: block; margin-bottom: 4px; color: #0b626b; font-size: .78rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.workflow-step p { margin: 0 0 12px; color: #0b4f5a; line-height: 1.4; font-weight: 650; }
+.workflow-step--done { border-color: #b8dfdf; background: #f4fbfa; }
+.reviewer-more { margin-top: 13px; }
+.reviewer-more summary { font-size: .88rem; }
+.reviewer-more__button { width: 100%; margin-top: 10px; }
 .family-version-categories { margin: 16px 0; padding: 12px; border: 1px solid #b8dfdf; border-radius: 12px; }
 .family-version-categories + label, #family-version-form > label { display: block; margin: 16px 0 7px; font-weight: 750; }
 .family-version-form > label:first-child { margin-top: 0; }
@@ -161,6 +168,10 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
   .publish-checks .needs-attention { color: #ffd475; }
   .family-version-button { border-color: #27757b; color: #a6f1ed; }
   .family-preview-button { background: #164950; color: #a6f1ed; }
+  .workflow-step { border-color: #27757b; background: #164950; }
+  .workflow-step > span { color: #75ebe7; }
+  .workflow-step p { color: #e6fbfa; }
+  .workflow-step--done { background: #0c343a; }
   .family-version-categories { border-color: #27757b; }
   .family-version-categories p { color: #b9d9d8; }
   .family-version-row { border-color: #27757b; }

@@ -217,9 +217,7 @@ function recipeCard(recipe, evaluation, review) {
   const rawNote = recipe.note || "Sprawdź składniki przed przygotowaniem.";
   const note = /obsługiwane przez zasadę rodzinną|obsługiwane przez ustalenie dietetyczne/i.test(rawNote) ? "" : rawNote;
   const familyNotes = (evaluation.familyNotes || []).map(escapeHtml).join("<br>");
-  const recipeStatus = recipe.needsRepublish ? "Wymaga ponownej publikacji" : review?.status === "approved" ? "Dopuszczony przez Kasię" : "Wymaga oceny Kasi";
   const time = recipe.timeMinutes ? `<span>${recipe.timeMinutes} min</span>` : "";
-  const controls = reviewControls(recipe.id, true, evaluation.warnings || [], recipe.ingredients, recipe.title);
   const editorView = isReviewer();
   const familyVersion = encodeURIComponent(JSON.stringify({
     id: recipe.id,
@@ -240,18 +238,25 @@ function recipeCard(recipe, evaluation, review) {
     note: recipe.familyRecipe.note || "",
     reasons: evaluation.warnings || []
   })) : "";
+  const technicalDetails = encodeURIComponent(JSON.stringify({
+    recipeId: recipe.id,
+    title: recipe.title,
+    reasons: evaluation.warnings?.length ? evaluation.warnings : ["Sprawdź wszystkie składniki źródłowego przepisu."],
+    ingredients: recipe.ingredients
+  }));
+  const published = recipe.familyReady && review?.status === "approved" && !recipe.needsRepublish;
+  const workflow = !recipe.familyRecipe
+    ? `<section class="workflow-step"><span>Krok 1 z 3</span><p>Przygotuj prostą wersję przepisu dla rodziny.</p><button class="primary" type="button" data-family-version="${familyVersion}">Przygotuj wersję dla rodziny</button></section>`
+    : published
+    ? `<section class="workflow-step workflow-step--done"><span>Opublikowano</span><p>Rodzina widzi już tę wersję przepisu.</p><button class="family-version-button" type="button" data-family-version="${familyVersion}">Zmień opublikowaną wersję</button></section>`
+    : `<section class="workflow-step"><span>Krok 2 z 3</span><p>Zobacz dokładnie, co zobaczy rodzina.</p><button class="primary" type="button" data-family-preview="${familyPreview}">Zobacz podgląd dla rodziny</button><button class="family-version-button" type="button" data-family-version="${familyVersion}">Wróć do edycji wersji</button></section>`;
   return `<article class="recipe-card">
     <div class="recipe-card__top"><h2>${escapeHtml(recipe.title)}</h2>${time}</div>
-    ${editorView ? `<p class="review">${recipeStatus}</p>` : ""}
-    ${editorView && evaluation.warnings?.length ? `<section class="ingredient-alert"><span>Do sprawdzenia przed decyzją Kasi</span><p>${evaluation.warnings.map(escapeHtml).join("<br>")}</p></section>` : ""}
-    ${editorView && familyNotes ? `<section class="kasia-assessment"><span>Podpowiedzi dla Kasi</span><p>Na podstawie wcześniejszych ustaleń:</p><ul><li>${familyNotes.replaceAll("<br>", "</li><li>")}</li></ul></section>` : ""}
-    ${editorView && note ? `<p class="recipe-note">${escapeHtml(note)}</p>` : ""}
     ${!editorView && recipe.familyNote ? `<p class="family-note"><b>Wskazówka Kasi:</b> ${escapeHtml(recipe.familyNote)}</p>` : ""}
     <details><summary>Składniki</summary><ul>${ingredients}</ul></details>
     ${instructions ? `<details><summary>Przygotowanie</summary><ol>${instructions}</ol></details>` : ""}
-    ${editorView ? (recipe.sourceUrl ? `<p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(recipe.publisher)}</a></p>` : `<p class="recipe-source">Źródło: ${escapeHtml(recipe.sourceLabel || recipe.publisher || "Prywatna biblioteka rodzinna")}</p>`) : ""}
-    ${editorView ? `<button class="family-version-button" type="button" data-family-version="${familyVersion}">Edytuj wersję dla rodziny</button>${familyPreview ? `<button class="family-preview-button" type="button" data-family-preview="${familyPreview}">Podgląd dla rodziny</button>` : ""}` : ""}
-    ${editorView ? controls : ""}
+    ${editorView ? workflow : ""}
+    ${editorView ? `<details class="reviewer-more"><summary>Opcje dodatkowe</summary>${evaluation.warnings?.length ? `<section class="ingredient-alert"><span>Informacje do sprawdzenia</span><p>${evaluation.warnings.map(escapeHtml).join("<br>")}</p></section>` : ""}${familyNotes ? `<section class="kasia-assessment"><span>Podpowiedzi dla Kasi</span><ul><li>${familyNotes.replaceAll("<br>", "</li><li>")}</li></ul></section>` : ""}${note ? `<p class="recipe-note">${escapeHtml(note)}</p>` : ""}${recipe.sourceUrl ? `<p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(recipe.publisher)}</a></p>` : `<p class="recipe-source">Źródło: ${escapeHtml(recipe.sourceLabel || recipe.publisher || "Prywatna biblioteka rodzinna")}</p>`}<button class="secondary reviewer-more__button" type="button" data-review="check" data-recipe-id="${recipe.id}" data-review-details="${technicalDetails}">Sprawdź informacje techniczne</button><button class="danger reviewer-more__button" type="button" data-review="excluded" data-recipe-id="${recipe.id}">Nie publikuj tego przepisu</button></details>` : ""}
   </article>`;
 }
 
