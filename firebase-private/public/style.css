@@ -87,6 +87,12 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
 .publish-confirm { display: flex; gap: 9px; align-items: flex-start; margin: 16px 0; line-height: 1.4; font-weight: 700; }
 .publish-confirm input { width: 20px; min-height: 20px; margin: 0; }
 .family-version-button { width: 100%; margin-top: 12px; min-height: 45px; border: 1px solid #83c7c7; border-radius: 11px; background: transparent; color: #0b626b; font-weight: 750; }
+.family-version-categories { margin: 16px 0; padding: 12px; border: 1px solid #b8dfdf; border-radius: 12px; }
+.family-version-categories legend { padding: 0 4px; font-weight: 750; }
+.family-version-categories p { margin: 5px 0 10px; color: #486a70; font-size: .84rem; }
+#family-version-category-options { display: grid; gap: 8px; }
+.family-category-option { display: flex; align-items: center; gap: 9px; min-height: 32px; font-weight: 650; }
+.family-category-option input { width: 20px; min-height: 20px; margin: 0; accent-color: #007f87; }
 .family-version-ingredients { display: grid; gap: 12px; margin: 14px 0; }
 .family-version-row { padding: 10px; border: 1px solid #b8dfdf; border-radius: 12px; }
 .family-version-row label { display: block; margin-bottom: 6px; font-size: .84rem; font-weight: 750; }
@@ -142,6 +148,8 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
   .danger { border-color: #d67d7d; background: #4e2528; color: #ffd5d5; }
   .publish-checks .needs-attention { color: #ffd475; }
   .family-version-button { border-color: #27757b; color: #a6f1ed; }
+  .family-version-categories { border-color: #27757b; }
+  .family-version-categories p { color: #b9d9d8; }
   .family-version-row { border-color: #27757b; }
   .family-version-hint { color: #a6f1ed; }
   .rule-card { background: #0c343a; border-color: #27757b; }

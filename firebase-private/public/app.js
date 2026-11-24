@@ -11,6 +11,7 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const state = { person: null, category: null, user: null, role: null, histamineProducts: null, ingredientRules: null, rulesReturnScreen: "people", queueRecipeId: null };
 const labels = { emilka: "Emilka", kasia: "Kasia", sniadanie: "Śniadanie", obiad: "Obiad", kolacja_przekaska: "Kolacja / Przekąska" };
+const recipeCategoryKeys = ["sniadanie", "obiad", "kolacja_przekaska"];
 const histamineSourceUrl = "https://raw.githubusercontent.com/Endriaczi/Histamina/main/script0.js";
 
 const show = (screen) => document.querySelectorAll(".screen").forEach((item) => item.classList.toggle("hidden", item.id !== `${screen}-screen`));
@@ -119,6 +120,15 @@ function recipeForFamily(recipe, rules) {
   };
 }
 
+function recipeCategories(recipe) {
+  const saved = Array.isArray(recipe.categories) ? recipe.categories : [recipe.category];
+  return [...new Set(saved.filter((category) => recipeCategoryKeys.includes(category)))];
+}
+
+function recipeCategoryLabel(recipe) {
+  return recipeCategories(recipe).map((category) => labels[category]).join(" · ") || "Bez kategorii";
+}
+
 function evaluateRecipeFor(person, recipe, products, familyRules) {
   if (person === "kasia") {
     const gluten = recipe.ingredients.filter((ingredient) =>
@@ -197,7 +207,8 @@ function recipeCard(recipe, evaluation, review) {
     id: recipe.id,
     title: recipe.title,
     ingredients: recipe.ingredients,
-    familyIngredients: recipe.familyIngredients || []
+    familyIngredients: recipe.familyIngredients || [],
+    categories: recipeCategories(recipe)
   }));
   return `<article class="recipe-card">
     <div class="recipe-card__top"><h2>${escapeHtml(recipe.title)}</h2>${time}</div>
@@ -252,8 +263,8 @@ async function renderReviewQueue() {
     }
     list.innerHTML = recipes.sort((left, right) => left.title.localeCompare(right.title, "pl")).map((recipe) => `<article class="queue-card">
       <h2>${escapeHtml(recipe.title)}</h2>
-      <p>${labels[recipe.category] || "Przepis"}</p>
-      <button class="primary" type="button" data-queue-recipe-id="${recipe.id}" data-queue-category="${recipe.category}">Opracuj przepis</button>
+      <p>${recipeCategoryLabel(recipe)}</p>
+      <button class="primary" type="button" data-queue-recipe-id="${recipe.id}" data-queue-category="${recipeCategories(recipe)[0] || "sniadanie"}">Opracuj przepis</button>
     </article>`).join("");
   } catch {
     list.innerHTML = "<p class=\"empty\">Nie udało się pobrać kolejki.</p>";
@@ -266,12 +277,12 @@ async function searchRecipes() {
   list.textContent = "Szukam przepisów…";
   try {
     const recipeQuery = isReviewer()
-      ? query(collection(db, "recipes"), where("category", "==", state.category))
+      ? query(collection(db, "recipes"))
       : query(collection(db, "recipes"), where("familyReady", "==", true));
     const snapshot = await getDocs(recipeQuery);
     const phrase = normalize(document.getElementById("ingredient").value);
     const found = snapshot.docs.map((item) => item.data()).filter((recipe) =>
-      recipe.category === state.category && (state.queueRecipeId ? recipe.id === state.queueRecipeId : (!phrase || recipe.ingredients.some((ingredient) => ingredientMatchesPhrase(ingredient, phrase))) )
+      recipeCategories(recipe).includes(state.category) && (state.queueRecipeId ? recipe.id === state.queueRecipeId : (!phrase || recipe.ingredients.some((ingredient) => ingredientMatchesPhrase(ingredient, phrase))) )
     );
     const products = isReviewer() && state.person === "emilka" ? await getHistamineProducts() : [];
     const familyRules = state.person === "emilka" ? await getIngredientRules() : [];
@@ -565,8 +576,21 @@ async function openFamilyVersionDialog(details) {
   const container = document.getElementById("family-version-ingredients");
   const rules = await getIngredientRules();
   const saved = new Map((details.familyIngredients || []).map((item) => [item.source, item.display]));
+  const categories = details.categories?.length ? details.categories : ["kolacja_przekaska"];
   document.getElementById("family-version-recipe").textContent = details.title;
   document.getElementById("family-version-message").textContent = "";
+  const categoryOptions = document.getElementById("family-version-category-options");
+  categoryOptions.replaceChildren(...recipeCategoryKeys.map((category) => {
+    const label = document.createElement("label");
+    label.className = "family-category-option";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.value = category;
+    input.checked = categories.includes(category);
+    input.name = "recipe-category";
+    label.append(input, document.createTextNode(labels[category]));
+    return label;
+  }));
   container.replaceChildren(...details.ingredients.map((ingredient) => {
     const row = document.createElement("div");
     row.className = "family-version-row";
@@ -683,9 +707,20 @@ document.getElementById("family-version-form").addEventListener("submit", async 
   const familyIngredients = [...document.querySelectorAll("#family-version-ingredients input")]
     .map((input) => ({ source: input.dataset.sourceIngredient, display: input.value.trim() }))
     .filter((item) => item.display && item.display !== item.source);
+  const categories = [...document.querySelectorAll("#family-version-category-options input:checked")].map((input) => input.value);
+  if (!categories.length) {
+    message.textContent = "Wybierz przynajmniej jedną kategorię.";
+    return;
+  }
   message.textContent = "Zapisuję wersję dla rodziny…";
   try {
-    await setDoc(doc(db, "recipes", recipeId), { familyIngredients, updatedBy: state.user.email, updatedAt: serverTimestamp() }, { merge: true });
+    await setDoc(doc(db, "recipes", recipeId), {
+      familyIngredients,
+      categories,
+      category: categories[0],
+      updatedBy: state.user.email,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
     dialog.close();
     await searchRecipes();
   } catch {

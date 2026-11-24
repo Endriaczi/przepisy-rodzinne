@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#f7f5f0">
     <title>Przepisy rodzinne</title>
-    <link rel="stylesheet" href="style.css?v=20261122-turkus">
+    <link rel="stylesheet" href="style.css?v=20261124-wiele-kategorii">
   </head>
   <body>
     <main class="app">
@@ -123,6 +123,11 @@
         <p id="family-version-recipe" class="product-rating"></p>
         <p class="recipe-note">Zmień tylko te składniki, które Kasia chce inaczej podać w tym konkretnym przepisie. Nie zmieni to ogólnych podpowiedzi Kasi.</p>
         <form id="family-version-form">
+          <fieldset class="family-version-categories">
+            <legend>W jakich kategoriach pokazać przepis?</legend>
+            <p>Możesz zaznaczyć więcej niż jedną.</p>
+            <div id="family-version-category-options"></div>
+          </fieldset>
           <div id="family-version-ingredients" class="family-version-ingredients"></div>
           <p id="family-version-message" class="message" aria-live="polite"></p>
           <div class="dialog-actions">
@@ -132,6 +137,6 @@
         </form>
       </article>
     </dialog>
-    <script type="module" src="app.js?v=20261124-editable-suggestions"></script>
+    <script type="module" src="app.js?v=20261124-wiele-kategorii"></script>
   </body>
 </html>
