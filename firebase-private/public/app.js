@@ -232,7 +232,8 @@ function recipeCard(recipe, evaluation, review) {
     familyRecipe: recipe.familyRecipe || null,
     instructions: recipe.instructions || [],
     note: recipe.note || "",
-    categories: recipeCategories(recipe)
+    categories: recipeCategories(recipe),
+    reasons: evaluation.warnings || []
   }));
   const familyPreview = recipe.familyRecipe ? encodeURIComponent(JSON.stringify({
     recipeId: recipe.id,
@@ -575,6 +576,7 @@ function openPublishDialog(details) {
   const dialog = document.getElementById("publish-dialog");
   const checks = document.getElementById("publish-dialog-checks");
   const confirmation = document.getElementById("publish-dialog-confirmation");
+  document.getElementById("publish-dialog-title").textContent = "Ostateczne potwierdzenie";
   document.getElementById("publish-dialog-recipe").textContent = details.title || "Wybrany przepis";
   checks.replaceChildren();
   const addCheck = (text, attention = false) => {
@@ -588,7 +590,9 @@ function openPublishDialog(details) {
   else addCheck("Nie wykryto automatycznych wątpliwości wymagających decyzji.");
   addCheck("Przed publikacją potwierdź, że zamienniki i warunki są już gotowe dla rodziny.");
   confirmation.checked = false;
-  document.getElementById("publish-dialog-confirm").disabled = true;
+  const confirmButton = document.getElementById("publish-dialog-confirm");
+  confirmButton.textContent = "Akceptuję i publikuję";
+  confirmButton.disabled = true;
   dialog.dataset.recipeId = details.recipeId || "";
   dialog.showModal();
 }
@@ -641,6 +645,7 @@ async function openFamilyVersionDialog(details) {
     return label;
   }));
   dialog.dataset.recipeId = details.id;
+  dialog.dataset.previewDetails = encodeURIComponent(JSON.stringify({ reasons: details.reasons || [] }));
   dialog.showModal();
 }
 
@@ -775,7 +780,7 @@ document.getElementById("family-version-form").addEventListener("submit", async 
     message.textContent = "Uzupełnij nazwę, składniki, przygotowanie oraz przynajmniej jedną kategorię.";
     return;
   }
-  message.textContent = "Zapisuję wersję dla rodziny…";
+  message.textContent = "Przygotowuję podgląd…";
   try {
     await setDoc(doc(db, "recipes", recipeId), {
       familyRecipe: { title, ingredients, instructions, note },
@@ -787,7 +792,9 @@ document.getElementById("family-version-form").addEventListener("submit", async 
       updatedAt: serverTimestamp()
     }, { merge: true });
     dialog.close();
-    await searchRecipes();
+    const sourceDetails = JSON.parse(decodeURIComponent(dialog.dataset.previewDetails || "{}"));
+    openFamilyPreviewDialog({ recipeId, title, categories, ingredients, instructions, note, reasons: sourceDetails.reasons || [] });
+    await refreshQueueCount();
   } catch {
     message.textContent = "Nie udało się zapisać wersji dla rodziny.";
   }
