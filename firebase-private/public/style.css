@@ -26,9 +26,10 @@ h1 { margin: 0; font-size: 1.5rem; }
 .portrait-admin[hidden] { display: none; }
 .portrait-admin p { margin: 0; }
 .secondary { display: block; border: 1px solid #007f87; border-radius: 12px; padding: 11px 14px; color: #007f87; font-weight: 650; text-align: center; cursor: pointer; }
-.topbar { display: flex; align-items: center; gap: 14px; min-height: 52px; margin-bottom: 28px; }
+.topbar { display: flex; align-items: center; gap: 12px; min-height: 44px; margin-bottom: 28px; }
 .topbar h1 { font-size: 1.35rem; }
-.back { width: 48px; height: 48px; border: 0; background: #dff3f2; color: #0b4f5a; border-radius: 50%; font-size: 1.6rem; }
+.back { min-height: 38px; border: 0; border-radius: 10px; padding: 7px 9px; background: transparent; color: #007f87; font-weight: 750; text-decoration: underline; text-underline-offset: 3px; }
+.back:active { background: #dff3f2; }
 .screen-label, .ingredient-label { display: block; margin: 0 0 12px; font-weight: 700; }
 .categories { display: grid; gap: 10px; margin-bottom: 32px; }
 .category { min-height: 60px; border: 2px solid #b8dfdf; border-radius: 16px; padding: 14px 16px; background: #f9ffff; color: #0b4f5a; text-align: left; font-weight: 650; }
@@ -126,7 +127,8 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
   .portrait { background-color: #123f45; color: #b9d9d8; }
   .portrait-admin { background: #0c343a; border-color: #27757b; }
   .secondary { border-color: #49d7d4; color: #75ebe7; }
-  .back { background: #164950; color: #e6fbfa; }
+  .back { color: #75ebe7; }
+  .back:active { background: #164950; }
   .category, input, select, textarea { background: #0d363c; border-color: #27757b; color: #e6fbfa; }
   .category.selected { background: #079aa2; border-color: #079aa2; }
   input::placeholder { color: #a7c9c8; }
