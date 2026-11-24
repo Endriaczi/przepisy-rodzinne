@@ -101,6 +101,10 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
 .rule-card h2 { margin: 0 0 6px; font-size: 1rem; }
 .rule-card p { margin: 5px 0; line-height: 1.4; }
 .rule-card__status { color: #0b626b; font-weight: 800; }
+.queue-card { padding: 16px; border: 1px solid #b8dfdf; border-radius: 15px; background: #effbfa; }
+.queue-card h2 { margin: 0; font-size: 1.05rem; }
+.queue-card p { margin: 7px 0 14px; color: #486a70; }
+.queue-card .primary { min-height: 46px; }
 
 @media (prefers-color-scheme: dark) {
   :root { background: #062a30; color: #e6fbfa; }
@@ -142,4 +146,6 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
   .family-version-hint { color: #a6f1ed; }
   .rule-card { background: #0c343a; border-color: #27757b; }
   .rule-card__status { color: #75ebe7; }
+  .queue-card { border-color: #27757b; background: #0c343a; }
+  .queue-card p { color: #b9d9d8; }
 }

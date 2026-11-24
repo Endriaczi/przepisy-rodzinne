@@ -9,7 +9,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-const state = { person: null, category: null, user: null, role: null, histamineProducts: null, ingredientRules: null, rulesReturnScreen: "people" };
+const state = { person: null, category: null, user: null, role: null, histamineProducts: null, ingredientRules: null, rulesReturnScreen: "people", queueRecipeId: null };
 const labels = { emilka: "Emilka", kasia: "Kasia", sniadanie: "Śniadanie", obiad: "Obiad", kolacja_przekaska: "Kolacja / Przekąska" };
 const histamineSourceUrl = "https://raw.githubusercontent.com/Endriaczi/Histamina/main/script0.js";
 
@@ -224,6 +224,42 @@ async function getRecipeReviews() {
   return Object.fromEntries(snapshot.docs.map((item) => [item.id, item.data()]));
 }
 
+async function getQueueRecipes() {
+  const [recipesSnapshot, reviews] = await Promise.all([getDocs(collection(db, "recipes")), getRecipeReviews()]);
+  return recipesSnapshot.docs.map((item) => item.data()).filter((recipe) => !recipe.familyReady && reviews[recipe.id]?.status !== "excluded");
+}
+
+async function refreshQueueCount() {
+  if (!isReviewer()) return;
+  const button = document.getElementById("review-queue-button");
+  try {
+    const recipes = await getQueueRecipes();
+    button.textContent = `Kolejka (${recipes.length})`;
+    button.hidden = false;
+  } catch {
+    button.hidden = true;
+  }
+}
+
+async function renderReviewQueue() {
+  const list = document.getElementById("queue-list");
+  list.innerHTML = "<p class=\"message\">Pobieram kolejkę…</p>";
+  try {
+    const recipes = await getQueueRecipes();
+    if (!recipes.length) {
+      list.innerHTML = "<p class=\"empty\">Nie ma przepisów oczekujących na opracowanie.</p>";
+      return;
+    }
+    list.innerHTML = recipes.sort((left, right) => left.title.localeCompare(right.title, "pl")).map((recipe) => `<article class="queue-card">
+      <h2>${escapeHtml(recipe.title)}</h2>
+      <p>${labels[recipe.category] || "Przepis"}</p>
+      <button class="primary" type="button" data-queue-recipe-id="${recipe.id}" data-queue-category="${recipe.category}">Opracuj przepis</button>
+    </article>`).join("");
+  } catch {
+    list.innerHTML = "<p class=\"empty\">Nie udało się pobrać kolejki.</p>";
+  }
+}
+
 async function searchRecipes() {
   const list = document.getElementById("recipe-list");
   list.className = "empty";
@@ -235,7 +271,7 @@ async function searchRecipes() {
     const snapshot = await getDocs(recipeQuery);
     const phrase = normalize(document.getElementById("ingredient").value);
     const found = snapshot.docs.map((item) => item.data()).filter((recipe) =>
-      recipe.category === state.category && (!phrase || recipe.ingredients.some((ingredient) => ingredientMatchesPhrase(ingredient, phrase)))
+      recipe.category === state.category && (state.queueRecipeId ? recipe.id === state.queueRecipeId : (!phrase || recipe.ingredients.some((ingredient) => ingredientMatchesPhrase(ingredient, phrase))) )
     );
     const products = isReviewer() && state.person === "emilka" ? await getHistamineProducts() : [];
     const familyRules = state.person === "emilka" ? await getIngredientRules() : [];
@@ -324,6 +360,7 @@ onAuthStateChanged(auth, async (user) => {
     document.getElementById("account-name").textContent = user.email;
     document.getElementById("portrait-admin").hidden = access.role !== "admin";
     document.getElementById("family-rules-button").hidden = !["admin", "reviewer"].includes(access.role);
+    await refreshQueueCount();
     loadPortrait("emilka");
     loadPortrait("kasia");
     show("people");
@@ -391,6 +428,21 @@ async function openRulesScreen(returnScreen = "people", ingredient = "") {
 
 document.getElementById("family-rules-button").addEventListener("click", async () => {
   await openRulesScreen();
+});
+document.getElementById("review-queue-button").addEventListener("click", async () => {
+  show("queue");
+  await renderReviewQueue();
+});
+document.getElementById("queue-list").addEventListener("click", async (event) => {
+  const button = event.target.closest("button[data-queue-recipe-id]");
+  if (!button || !isReviewer()) return;
+  state.person = "emilka";
+  state.category = button.dataset.queueCategory;
+  state.queueRecipeId = button.dataset.queueRecipeId;
+  document.getElementById("results-title").textContent = "Opracowanie przepisu";
+  document.getElementById("result-summary").textContent = `Emilka · ${labels[state.category]}`;
+  show("results");
+  await searchRecipes();
 });
 document.getElementById("ingredient-rule-form").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -567,6 +619,7 @@ document.getElementById("recipe-list").addEventListener("click", async (event) =
       publishedAt: serverTimestamp()
     }, { merge: true });
     await searchRecipes();
+    await refreshQueueCount();
   } finally {
     button.disabled = false;
   }
@@ -597,6 +650,7 @@ document.getElementById("review-dialog-actions").addEventListener("click", async
     }, { merge: true });
     dialog.close();
     await searchRecipes();
+    await refreshQueueCount();
   } finally {
     button.disabled = false;
   }
@@ -614,6 +668,7 @@ document.getElementById("publish-dialog-confirm").addEventListener("click", asyn
     await publishRecipe(recipeId);
     dialog.close();
     await searchRecipes();
+    await refreshQueueCount();
   } finally {
     event.target.disabled = false;
   }
@@ -743,6 +798,7 @@ document.querySelectorAll("[data-portrait-upload]").forEach((input) => input.add
 document.querySelectorAll("[data-person]").forEach((button) => button.addEventListener("click", () => {
   state.person = button.dataset.person;
   state.category = null;
+  state.queueRecipeId = null;
   document.getElementById("search-title").textContent = labels[state.person];
   document.querySelectorAll(".category").forEach((item) => item.classList.remove("selected"));
   document.getElementById("show-results").disabled = true;
@@ -750,6 +806,7 @@ document.querySelectorAll("[data-person]").forEach((button) => button.addEventLi
 }));
 document.querySelectorAll(".category").forEach((button) => button.addEventListener("click", () => {
   state.category = button.dataset.category;
+  state.queueRecipeId = null;
   document.querySelectorAll(".category").forEach((item) => item.classList.toggle("selected", item === button));
   document.getElementById("show-results").disabled = false;
 }));

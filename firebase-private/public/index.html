@@ -20,7 +20,7 @@
       </section>
 
       <section id="people-screen" class="screen people-screen hidden" aria-label="Wybór osoby">
-        <header class="account"><span id="account-name"></span><span class="account-actions"><button id="family-rules-button" hidden>Ustalenia Kasi</button><button id="logout-button">Wyloguj</button></span></header>
+        <header class="account"><span id="account-name"></span><span class="account-actions"><button id="review-queue-button" hidden>Kolejka</button><button id="family-rules-button" hidden>Ustalenia Kasi</button><button id="logout-button">Wyloguj</button></span></header>
         <button class="person-card" data-person="emilka" aria-label="Wybierz Emilkę">
           <span id="portrait-emilka" class="portrait">Zdjęcie Emilki<br>dodamy po zabezpieczeniu plików</span>
         </button>
@@ -82,6 +82,12 @@
           <p id="rule-message" class="message" aria-live="polite"></p>
         </form>
         <div id="rules-list" class="rules-list"></div>
+      </section>
+
+      <section id="queue-screen" class="screen hidden" aria-labelledby="queue-title">
+        <header class="topbar"><button class="back" data-back="people" aria-label="Wróć">←</button><h1 id="queue-title">Kolejka Kasi</h1></header>
+        <p class="message">Przepisy oczekujące na opracowanie przed publikacją dla rodziny.</p>
+        <div id="queue-list" class="recipe-list" aria-live="polite"></div>
       </section>
     </main>
     <dialog id="review-dialog" class="review-dialog" aria-labelledby="review-dialog-title">
