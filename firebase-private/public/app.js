@@ -646,7 +646,29 @@ async function openFamilyVersionDialog(details) {
   }));
   dialog.dataset.recipeId = details.id;
   dialog.dataset.previewDetails = encodeURIComponent(JSON.stringify({ reasons: details.reasons || [] }));
+  dialog.dataset.initialVersion = JSON.stringify(readFamilyVersionForm());
   dialog.showModal();
+}
+
+function readFamilyVersionForm() {
+  return {
+    title: document.getElementById("family-version-recipe-title").value.trim(),
+    ingredients: document.getElementById("family-version-ingredients").value.split("\n").map((item) => item.trim()).filter(Boolean),
+    instructions: document.getElementById("family-version-instructions").value.split("\n").map((item) => item.trim()).filter(Boolean),
+    note: document.getElementById("family-version-note").value.trim(),
+    categories: [...document.querySelectorAll("#family-version-category-options input:checked")].map((input) => input.value)
+  };
+}
+
+function hasUnsavedFamilyVersionChanges() {
+  const dialog = document.getElementById("family-version-dialog");
+  return dialog.dataset.initialVersion !== JSON.stringify(readFamilyVersionForm());
+}
+
+function closeFamilyVersionDialog() {
+  const dialog = document.getElementById("family-version-dialog");
+  if (hasUnsavedFamilyVersionChanges() && !window.confirm("Masz niezapisane zmiany. Czy na pewno chcesz wrócić bez zapisywania?")) return;
+  dialog.close();
 }
 
 function openFamilyPreviewDialog(details) {
@@ -758,29 +780,29 @@ document.getElementById("publish-dialog-confirm").addEventListener("click", asyn
     event.target.disabled = false;
   }
 });
-document.getElementById("family-version-close").addEventListener("click", () => document.getElementById("family-version-dialog").close());
+document.getElementById("family-version-close").addEventListener("click", closeFamilyVersionDialog);
+document.getElementById("family-version-dialog").addEventListener("cancel", (event) => {
+  if (!hasUnsavedFamilyVersionChanges()) return;
+  event.preventDefault();
+  closeFamilyVersionDialog();
+});
 document.getElementById("family-preview-close").addEventListener("click", () => document.getElementById("family-preview-dialog").close());
 document.getElementById("family-preview-publish").addEventListener("click", () => {
   const dialog = document.getElementById("family-preview-dialog");
   dialog.close();
   openPublishDialog(JSON.parse(decodeURIComponent(dialog.dataset.publishDetails || "{}")));
 });
-document.getElementById("family-version-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
+async function saveFamilyVersion(openPreview) {
   const dialog = document.getElementById("family-version-dialog");
   const recipeId = dialog.dataset.recipeId;
   const message = document.getElementById("family-version-message");
   if (!recipeId) return;
-  const title = document.getElementById("family-version-recipe-title").value.trim();
-  const ingredients = document.getElementById("family-version-ingredients").value.split("\n").map((item) => item.trim()).filter(Boolean);
-  const instructions = document.getElementById("family-version-instructions").value.split("\n").map((item) => item.trim()).filter(Boolean);
-  const note = document.getElementById("family-version-note").value.trim();
-  const categories = [...document.querySelectorAll("#family-version-category-options input:checked")].map((input) => input.value);
+  const { title, ingredients, instructions, note, categories } = readFamilyVersionForm();
   if (!title || !ingredients.length || !instructions.length || !categories.length) {
     message.textContent = "Uzupełnij nazwę, składniki, przygotowanie oraz przynajmniej jedną kategorię.";
     return;
   }
-  message.textContent = "Przygotowuję podgląd…";
+  message.textContent = openPreview ? "Przygotowuję podgląd…" : "Zapisuję wersję roboczą…";
   try {
     await setDoc(doc(db, "recipes", recipeId), {
       familyRecipe: { title, ingredients, instructions, note },
@@ -791,13 +813,25 @@ document.getElementById("family-version-form").addEventListener("submit", async 
       updatedBy: state.user.email,
       updatedAt: serverTimestamp()
     }, { merge: true });
-    dialog.close();
-    const sourceDetails = JSON.parse(decodeURIComponent(dialog.dataset.previewDetails || "{}"));
-    openFamilyPreviewDialog({ recipeId, title, categories, ingredients, instructions, note, reasons: sourceDetails.reasons || [] });
+    dialog.dataset.initialVersion = JSON.stringify(readFamilyVersionForm());
+    if (openPreview) {
+      dialog.close();
+      const sourceDetails = JSON.parse(decodeURIComponent(dialog.dataset.previewDetails || "{}"));
+      openFamilyPreviewDialog({ recipeId, title, categories, ingredients, instructions, note, reasons: sourceDetails.reasons || [] });
+    } else {
+      message.textContent = "Wersja robocza została zapisana. Możesz wrócić później do kolejki.";
+    }
     await refreshQueueCount();
   } catch {
     message.textContent = "Nie udało się zapisać wersji dla rodziny.";
   }
+}
+document.getElementById("family-version-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await saveFamilyVersion(true);
+});
+document.getElementById("family-version-save-draft").addEventListener("click", async () => {
+  await saveFamilyVersion(false);
 });
 document.getElementById("seed-recipes").addEventListener("click", async () => {
   const message = document.getElementById("portrait-message");
