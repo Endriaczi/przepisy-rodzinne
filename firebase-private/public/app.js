@@ -219,6 +219,7 @@ function reviewControls(recipeId, canApprove = true, reasons = [], ingredients =
 function recipeCard(recipe, evaluation, review) {
   const ingredients = recipe.ingredients.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   const instructions = (recipe.instructions || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  const checkedIngredients = evaluation.checkedIngredients || recipe.ingredients;
   const rawNote = recipe.note || "Sprawdź składniki przed przygotowaniem.";
   const note = /obsługiwane przez zasadę rodzinną|obsługiwane przez ustalenie dietetyczne/i.test(rawNote) ? "" : rawNote;
   const familyNotes = (evaluation.familyNotes || []).map(escapeHtml).join("<br>");
@@ -248,7 +249,7 @@ function recipeCard(recipe, evaluation, review) {
     recipeId: recipe.id,
     title: recipe.title,
     reasons: evaluation.warnings?.length ? evaluation.warnings : ["Sprawdź wszystkie składniki źródłowego przepisu."],
-    ingredients: recipe.ingredients
+    ingredients: checkedIngredients
   }));
   const published = recipe.familyReady && review?.status === "approved" && !recipe.needsRepublish;
   const workflow = !recipe.familyRecipe
@@ -259,8 +260,8 @@ function recipeCard(recipe, evaluation, review) {
   return `<article class="recipe-card">
     <div class="recipe-card__top"><h2>${escapeHtml(recipe.title)}</h2>${time}</div>
     ${!editorView && recipe.familyNote ? `<p class="family-note"><b>Wskazówka Kasi:</b> ${escapeHtml(recipe.familyNote)}</p>` : ""}
-    <details><summary>Składniki</summary><ul>${ingredients}</ul></details>
-    ${instructions ? `<details><summary>Przygotowanie</summary><ol>${instructions}</ol></details>` : ""}
+    <details><summary>${editorView && recipe.familyRecipe ? "Składniki źródłowego przepisu" : "Składniki"}</summary><ul>${ingredients}</ul></details>
+    ${instructions ? `<details><summary>${editorView && recipe.familyRecipe ? "Przygotowanie w źródłowym przepisie" : "Przygotowanie"}</summary><ol>${instructions}</ol></details>` : ""}
     ${editorView ? workflow : ""}
     ${editorView ? `<details class="reviewer-more"><summary>Opcje dodatkowe</summary>${evaluation.warnings?.length ? `<section class="ingredient-alert"><span>Informacje do sprawdzenia</span><p>${evaluation.warnings.map(escapeHtml).join("<br>")}</p></section>` : ""}${familyNotes ? `<section class="kasia-assessment"><span>Podpowiedzi dla Kasi</span><ul><li>${familyNotes.replaceAll("<br>", "</li><li>")}</li></ul></section>` : ""}${note ? `<p class="recipe-note">${escapeHtml(note)}</p>` : ""}${recipe.sourceUrl ? `<p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(recipe.publisher)}</a></p>` : `<p class="recipe-source">Źródło: ${escapeHtml(recipe.sourceLabel || recipe.publisher || "Prywatna biblioteka rodzinna")}</p>`}<button class="secondary reviewer-more__button" type="button" data-review="check" data-recipe-id="${recipe.id}" data-review-details="${technicalDetails}">Sprawdź informacje techniczne</button><button class="danger reviewer-more__button" type="button" data-review="excluded" data-recipe-id="${recipe.id}">Nie publikuj tego przepisu</button></details>` : ""}
   </article>`;
@@ -336,7 +337,20 @@ async function searchRecipes() {
         evaluation: { visible: true, warnings: [], familyNotes: [] },
         review: null
       };
-      const evaluation = evaluateRecipeFor(state.person, recipe, products, familyRules);
+      const recipeToCheck = recipe.familyRecipe
+        ? { ...recipe, ingredients: recipe.familyRecipe.ingredients || recipe.ingredients }
+        : recipe;
+      const sourceEvaluation = evaluateRecipeFor(state.person, recipeToCheck, products, familyRules);
+      // Kasia musi móc wrócić do redakcji nawet wtedy, gdy gotowa wersja ma jeszcze składnik do poprawy.
+      const evaluation = recipe.familyRecipe && !sourceEvaluation.visible
+        ? {
+            ...sourceEvaluation,
+            visible: true,
+            warnings: [...(sourceEvaluation.warnings || []), ...(sourceEvaluation.reasons || [])],
+            finalVersionNeedsAttention: true,
+            checkedIngredients: recipeToCheck.ingredients
+          }
+        : { ...sourceEvaluation, checkedIngredients: recipeToCheck.ingredients };
       const review = reviews[recipe.id];
       if (review?.status === "excluded") return { recipe, evaluation: { visible: false, canOverride: false, reasons: ["wykluczony decyzją Kasi"] }, review };
       if (review?.status === "approved" && evaluation.canOverride) {
@@ -650,6 +664,13 @@ async function openFamilyVersionDialog(details) {
   dialog.showModal();
 }
 
+async function evaluateFamilyVersion(ingredients) {
+  const products = state.person === "emilka" ? await getHistamineProducts() : [];
+  const familyRules = state.person === "emilka" ? await getIngredientRules() : [];
+  const result = evaluateRecipeFor(state.person, { ingredients }, products, familyRules);
+  return [...(result.warnings || []), ...(result.reasons || [])];
+}
+
 function readFamilyVersionForm() {
   return {
     title: document.getElementById("family-version-recipe-title").value.trim(),
@@ -816,8 +837,8 @@ async function saveFamilyVersion(openPreview) {
     dialog.dataset.initialVersion = JSON.stringify(readFamilyVersionForm());
     if (openPreview) {
       dialog.close();
-      const sourceDetails = JSON.parse(decodeURIComponent(dialog.dataset.previewDetails || "{}"));
-      openFamilyPreviewDialog({ recipeId, title, categories, ingredients, instructions, note, reasons: sourceDetails.reasons || [] });
+      const reasons = await evaluateFamilyVersion(ingredients);
+      openFamilyPreviewDialog({ recipeId, title, categories, ingredients, instructions, note, reasons });
     } else {
       message.textContent = "Wersja robocza została zapisana. Możesz wrócić później do kolejki.";
     }
