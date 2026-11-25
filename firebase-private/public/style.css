@@ -34,6 +34,8 @@ h1 { margin: 0; font-size: 1.5rem; }
 .categories { display: grid; gap: 10px; margin-bottom: 32px; }
 .category { min-height: 60px; border: 2px solid #b8dfdf; border-radius: 16px; padding: 14px 16px; background: #f9ffff; color: #0b4f5a; text-align: left; font-weight: 650; }
 .category.selected { background: #007f87; border-color: #007f87; color: #fff; }
+.selected-meal { width: fit-content; margin: 0 auto 10px; padding: 8px 20px; border: 1px solid #00969c; border-radius: 999px; background: #e0f5f3; color: #075c64; font-size: 1.12rem; font-weight: 750; text-align: center; }
+.change-category { display: block; margin: 0 auto 28px; border: 0; background: transparent; color: #007f87; font: inherit; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
 input, select, textarea { width: 100%; min-height: 54px; border: 2px solid #b8dfdf; border-radius: 14px; padding: 0 14px; outline-color: #007f87; font: inherit; }
 textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
 #show-results { margin-top: 20px; }
@@ -151,6 +153,8 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
   .back:active { background: #164950; }
   .category, input, select, textarea { background: #0d363c; border-color: #27757b; color: #e6fbfa; }
   .category.selected { background: #079aa2; border-color: #079aa2; }
+  .selected-meal { border-color: #1b969c; background: #07545c; color: #e9ffff; }
+  .change-category { color: #75ebe7; }
   input::placeholder { color: #a7c9c8; }
   .recipe-card { background: #0d363c; border-color: #27757b; }
   .recipe-card__top span, .recipe-note, .recipe-source, .recipe-card ul, .recipe-card ol { color: #b9d9d8; }

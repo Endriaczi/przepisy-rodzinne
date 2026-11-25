@@ -11,7 +11,7 @@
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
     <title>Przepisy rodzinne</title>
-    <link rel="stylesheet" href="style.css?v=20261125-queue">
+    <link rel="stylesheet" href="style.css?v=20261125-meal-choice">
   </head>
   <body>
     <main class="app">
@@ -49,15 +49,19 @@
 
       <section id="search-screen" class="screen hidden" aria-labelledby="search-title">
         <header class="topbar"><button class="back" data-back="people">Zmień osobę</button><h1 id="search-title"></h1></header>
-        <p class="screen-label">Wybierz posiłek</p>
+        <p id="meal-choice-label" class="screen-label">Wybierz posiłek</p>
         <div class="categories" role="group" aria-label="Kategoria posiłku">
           <button class="category" data-category="sniadanie">Śniadanie</button>
           <button class="category" data-category="obiad">Obiad</button>
           <button class="category" data-category="kolacja_przekaska">Kolacja / Przekąska</button>
         </div>
-        <label class="ingredient-label" for="ingredient">Główny składnik</label>
-        <input id="ingredient" type="search" autocomplete="off" placeholder="np. kurczak, ryż, batat">
-        <button id="show-results" class="primary" disabled>Pokaż przepisy</button>
+        <p id="selected-meal" class="selected-meal" hidden></p>
+        <section id="ingredient-search-options" hidden>
+          <button id="change-category" class="change-category" type="button">Zmień posiłek</button>
+          <label class="ingredient-label" for="ingredient">Główny składnik</label>
+          <input id="ingredient" type="search" autocomplete="off" placeholder="np. kurczak, ryż, batat">
+          <button id="show-results" class="primary">Pokaż przepisy</button>
+        </section>
       </section>
 
       <section id="results-screen" class="screen hidden" aria-labelledby="results-title">
@@ -171,6 +175,6 @@
         </div>
       </article>
     </dialog>
-    <script type="module" src="app.js?v=20261125-queue"></script>
+    <script type="module" src="app.js?v=20261125-meal-choice"></script>
   </body>
 </html>

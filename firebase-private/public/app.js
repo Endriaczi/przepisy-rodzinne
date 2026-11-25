@@ -969,15 +969,33 @@ document.querySelectorAll("[data-person]").forEach((button) => button.addEventLi
   state.queueRecipeId = null;
   document.getElementById("search-title").textContent = labels[state.person];
   document.querySelectorAll(".category").forEach((item) => item.classList.remove("selected"));
-  document.getElementById("show-results").disabled = true;
+  document.getElementById("meal-choice-label").hidden = false;
+  document.querySelector(".categories").hidden = false;
+  document.getElementById("selected-meal").hidden = true;
+  document.getElementById("ingredient-search-options").hidden = true;
+  document.getElementById("ingredient").value = "";
   show("search");
 }));
 document.querySelectorAll(".category").forEach((button) => button.addEventListener("click", () => {
   state.category = button.dataset.category;
   state.queueRecipeId = null;
   document.querySelectorAll(".category").forEach((item) => item.classList.toggle("selected", item === button));
-  document.getElementById("show-results").disabled = false;
+  document.getElementById("meal-choice-label").hidden = true;
+  document.querySelector(".categories").hidden = true;
+  const selectedMeal = document.getElementById("selected-meal");
+  selectedMeal.textContent = labels[state.category];
+  selectedMeal.hidden = false;
+  document.getElementById("ingredient-search-options").hidden = false;
+  document.getElementById("ingredient").focus();
 }));
+document.getElementById("change-category").addEventListener("click", () => {
+  state.category = null;
+  document.querySelectorAll(".category").forEach((item) => item.classList.remove("selected"));
+  document.getElementById("meal-choice-label").hidden = false;
+  document.querySelector(".categories").hidden = false;
+  document.getElementById("selected-meal").hidden = true;
+  document.getElementById("ingredient-search-options").hidden = true;
+});
 document.getElementById("show-results").addEventListener("click", async () => {
   setResultsBack("search", "Zmień wybór");
   document.getElementById("result-summary").textContent = `${labels[state.person]} · ${labels[state.category]}`;
