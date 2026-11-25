@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-import { getFirestore, collection, doc, getDoc, getDocs, query, where, limit, writeBatch, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+import { getFirestore, collection, doc, getDoc, getDocs, query, where, limit, writeBatch, setDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { getStorage, ref, getDownloadURL, uploadBytes } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-storage.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { recipeSeed } from "./recipe-seed.js";
@@ -9,7 +9,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-const state = { person: null, category: null, user: null, role: null, histamineProducts: null, ingredientRules: null, rulesReturnScreen: "people", queueRecipeId: null };
+const state = { person: null, category: null, user: null, role: null, histamineProducts: null, ingredientRules: null, savedRecipeIds: null, rulesReturnScreen: "people", queueRecipeId: null };
 const labels = { emilka: "Emilka", kasia: "Kasia", sniadanie: "Śniadanie", obiad: "Obiad", kolacja_przekaska: "Kolacja / Przekąska" };
 const recipeCategoryKeys = ["sniadanie", "obiad", "kolacja_przekaska"];
 const histamineSourceUrl = "https://raw.githubusercontent.com/Endriaczi/Histamina/main/script0.js";
@@ -216,7 +216,7 @@ function reviewControls(recipeId, canApprove = true, reasons = [], ingredients =
   </div>`;
 }
 
-function recipeCard(recipe, evaluation, review) {
+function recipeCard(recipe, evaluation, review, isSaved = false) {
   const ingredients = recipe.ingredients.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   const instructions = (recipe.instructions || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   const checkedIngredients = evaluation.checkedIngredients || recipe.ingredients;
@@ -251,18 +251,20 @@ function recipeCard(recipe, evaluation, review) {
     reasons: evaluation.warnings?.length ? evaluation.warnings : ["Sprawdź wszystkie składniki źródłowego przepisu."],
     ingredients: checkedIngredients
   }));
+  const emilkaFavorite = recipe.emilkaFavorite ?? recipe.favorite ?? false;
   const published = recipe.familyReady && review?.status === "approved" && !recipe.needsRepublish;
   const workflow = !recipe.familyRecipe
     ? `<section class="workflow-step"><span>Krok 1 z 3</span><p>Przygotuj prostą wersję przepisu dla rodziny.</p><button class="primary" type="button" data-family-version="${familyVersion}">Przygotuj wersję dla rodziny</button></section>`
     : published
-    ? `<section class="workflow-step workflow-step--done"><span>Opublikowano</span><p>Rodzina widzi już tę wersję przepisu.</p><button class="family-version-button" type="button" data-family-version="${familyVersion}">Zmień opublikowaną wersję</button><button class="family-version-button" type="button" data-favorite-recipe-id="${recipe.id}" data-favorite-value="${recipe.favorite ? "false" : "true"}">${recipe.favorite ? "Usuń z ulubionych" : "Dodaj do ulubionych"}</button></section>`
+    ? `<section class="workflow-step workflow-step--done"><span>Opublikowano</span><p>Rodzina widzi już tę wersję przepisu.</p><button class="family-version-button" type="button" data-family-version="${familyVersion}">Zmień opublikowaną wersję</button><button class="family-version-button" type="button" data-favorite-recipe-id="${recipe.id}" data-favorite-value="${emilkaFavorite ? "false" : "true"}">${emilkaFavorite ? "Usuń z ulubionych Emilki" : "Oznacz jako ulubione Emilki"}</button></section>`
     : `<section class="workflow-step"><span>Krok 2 z 3</span><p>Zobacz dokładnie, co zobaczy rodzina.</p><button class="primary" type="button" data-family-preview="${familyPreview}">Zobacz podgląd dla rodziny</button><button class="family-version-button" type="button" data-family-version="${familyVersion}">Wróć do edycji wersji</button></section>`;
   return `<article class="recipe-card">
     <div class="recipe-card__top"><h2>${escapeHtml(recipe.title)}</h2>${time}</div>
-    ${recipe.favorite ? `<p class="favorite-recipe">Ulubiony przepis Kasi</p>` : ""}
+    ${emilkaFavorite || isSaved ? `<p class="favorite-recipe">${emilkaFavorite ? "♥ Ulubione Emilki" : ""}${emilkaFavorite && isSaved ? "&nbsp;&nbsp;" : ""}${isSaved ? "🔖 Zapisane" : ""}</p>` : ""}
     ${!editorView && recipe.familyNote ? `<p class="family-note"><b>Wskazówka Kasi:</b> ${escapeHtml(recipe.familyNote)}</p>` : ""}
     <details><summary>${editorView && recipe.familyRecipe ? "Składniki źródłowego przepisu" : "Składniki"}</summary><ul>${ingredients}</ul></details>
     ${instructions ? `<details><summary>${editorView && recipe.familyRecipe ? "Przygotowanie w źródłowym przepisie" : "Przygotowanie"}</summary><ol>${instructions}</ol></details>` : ""}
+    <button class="save-recipe" type="button" data-save-recipe-id="${recipe.id}" data-save-recipe-value="${isSaved ? "false" : "true"}">${isSaved ? "Usuń zapis" : "Zapisz"}</button>
     ${editorView ? workflow : ""}
     ${editorView ? `<details class="reviewer-more"><summary>Opcje dodatkowe</summary>${evaluation.warnings?.length ? `<section class="ingredient-alert"><span>Informacje do sprawdzenia</span><p>${evaluation.warnings.map(escapeHtml).join("<br>")}</p></section>` : ""}${familyNotes ? `<section class="kasia-assessment"><span>Podpowiedzi dla Kasi</span><ul><li>${familyNotes.replaceAll("<br>", "</li><li>")}</li></ul></section>` : ""}${note ? `<p class="recipe-note">${escapeHtml(note)}</p>` : ""}${recipe.sourceUrl ? `<p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(recipe.publisher)}</a></p>` : `<p class="recipe-source">Źródło: ${escapeHtml(recipe.sourceLabel || recipe.publisher || "Prywatna biblioteka rodzinna")}</p>`}<button class="secondary reviewer-more__button" type="button" data-review="check" data-recipe-id="${recipe.id}" data-review-details="${technicalDetails}">Sprawdź informacje techniczne</button><button class="danger reviewer-more__button" type="button" data-review="excluded" data-recipe-id="${recipe.id}">Nie publikuj tego przepisu</button></details>` : ""}
   </article>`;
@@ -277,6 +279,14 @@ function reviewQueue(items) {
 async function getRecipeReviews() {
   const snapshot = await getDocs(collection(db, "recipeReviews"));
   return Object.fromEntries(snapshot.docs.map((item) => [item.id, item.data()]));
+}
+
+async function getSavedRecipeIds() {
+  if (!state.user) return new Set();
+  if (state.savedRecipeIds) return state.savedRecipeIds;
+  const snapshot = await getDocs(collection(db, "userFavorites", state.user.uid, "recipes"));
+  state.savedRecipeIds = new Set(snapshot.docs.map((item) => item.id));
+  return state.savedRecipeIds;
 }
 
 async function getQueueRecipes() {
@@ -337,6 +347,7 @@ async function searchRecipes() {
     const products = isReviewer() && state.person === "emilka" ? await getHistamineProducts() : [];
     const familyRules = state.person === "emilka" ? await getIngredientRules() : [];
     const reviews = isReviewer() ? await getRecipeReviews() : {};
+    const savedRecipeIds = await getSavedRecipeIds();
     const evaluated = found.map((recipe) => {
       if (!isReviewer()) return {
         recipe,
@@ -366,7 +377,7 @@ async function searchRecipes() {
       return { recipe, evaluation, review };
     });
     const recipes = evaluated.filter((item) => item.evaluation.visible).sort((left, right) =>
-      Number(right.recipe.favorite) - Number(left.recipe.favorite) || left.recipe.title.localeCompare(right.recipe.title, "pl")
+      Number(right.recipe.emilkaFavorite ?? right.recipe.favorite) - Number(left.recipe.emilkaFavorite ?? left.recipe.favorite) || left.recipe.title.localeCompare(right.recipe.title, "pl")
     );
     if (!recipes.length) {
       const baseMessage = !isReviewer()
@@ -392,7 +403,7 @@ async function searchRecipes() {
     list.className = "recipe-list";
     const excluded = evaluated.length - recipes.length;
     const reviewItems = evaluated.filter((item) => !item.evaluation.visible);
-    list.innerHTML = `${isReviewer() && state.person === "emilka" && excluded ? `<p class="filter-note">Ukryto ${excluded} przepisów niespełniających zasad Emilki.</p>` : ""}${recipes.map((item) => recipeCard(item.displayRecipe || item.recipe, item.evaluation, item.review)).join("")}${reviewQueue(reviewItems)}`;
+    list.innerHTML = `${isReviewer() && state.person === "emilka" && excluded ? `<p class="filter-note">Ukryto ${excluded} przepisów niespełniających zasad Emilki.</p>` : ""}${recipes.map((item) => recipeCard(item.displayRecipe || item.recipe, item.evaluation, item.review, savedRecipeIds.has(item.recipe.id))).join("")}${reviewQueue(reviewItems)}`;
   } catch {
     list.className = "empty";
     list.textContent = "Nie udało się pobrać prywatnej bazy. Spróbuj ponownie.";
@@ -422,7 +433,7 @@ async function loadPortrait(person) {
 }
 
 onAuthStateChanged(auth, async (user) => {
-  if (!user) { state.user = null; show("login"); return; }
+  if (!user) { state.user = null; state.savedRecipeIds = null; show("login"); return; }
   setLoginMessage("Sprawdzam dostęp…");
   try {
     const access = await getAccess(user);
@@ -432,6 +443,7 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
     state.user = user;
+    state.savedRecipeIds = null;
     state.role = access.role;
     document.getElementById("account-name").textContent = user.email;
     document.getElementById("portrait-admin").hidden = access.role !== "admin";
@@ -723,12 +735,31 @@ function openFamilyPreviewDialog(details) {
 }
 
 document.getElementById("recipe-list").addEventListener("click", async (event) => {
+  const savedButton = event.target.closest("button[data-save-recipe-id]");
+  if (savedButton && state.user) {
+    savedButton.disabled = true;
+    const recipeId = savedButton.dataset.saveRecipeId;
+    try {
+      const savedRecipe = doc(db, "userFavorites", state.user.uid, "recipes", recipeId);
+      if (savedButton.dataset.saveRecipeValue === "true") {
+        await setDoc(savedRecipe, { recipeId, savedAt: serverTimestamp() });
+        state.savedRecipeIds = new Set([...(state.savedRecipeIds || []), recipeId]);
+      } else {
+        await deleteDoc(savedRecipe);
+        state.savedRecipeIds?.delete(recipeId);
+      }
+      await searchRecipes();
+    } finally {
+      savedButton.disabled = false;
+    }
+    return;
+  }
   const favoriteButton = event.target.closest("button[data-favorite-recipe-id]");
   if (favoriteButton && isReviewer()) {
     favoriteButton.disabled = true;
     try {
       await setDoc(doc(db, "recipes", favoriteButton.dataset.favoriteRecipeId), {
-        favorite: favoriteButton.dataset.favoriteValue === "true",
+        emilkaFavorite: favoriteButton.dataset.favoriteValue === "true",
         favoriteUpdatedBy: state.user.email,
         favoriteUpdatedAt: serverTimestamp()
       }, { merge: true });

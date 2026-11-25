@@ -50,6 +50,10 @@ service cloud.firestore {
       allow delete: if isAdministrator();
     }
 
+    match /userFavorites/{userId}/recipes/{recipeId} {
+      allow read, create, update, delete: if isAllowedFamilyMember() && request.auth.uid == userId;
+    }
+
     match /settings/{settingId} {
       allow read: if isAllowedFamilyMember();
       allow write: if false;
