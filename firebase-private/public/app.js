@@ -304,11 +304,17 @@ async function renderReviewQueue() {
       list.innerHTML = "<p class=\"empty\">Nie ma przepisów oczekujących na opracowanie.</p>";
       return;
     }
-    list.innerHTML = recipes.sort((left, right) => left.title.localeCompare(right.title, "pl")).map((recipe) => `<article class="queue-card">
+    const sorted = recipes.sort((left, right) => left.title.localeCompare(right.title, "pl"));
+    const newRecipes = sorted.filter((recipe) => !recipe.familyRecipe);
+    const drafts = sorted.filter((recipe) => recipe.familyRecipe);
+    const cards = (items, action) => items.map((recipe) => `<article class="queue-card">
       <h2>${escapeHtml(recipe.title)}</h2>
       <p>${recipeCategoryLabel(recipe)}</p>
-      <button class="primary" type="button" data-queue-recipe-id="${recipe.id}" data-queue-category="${recipeCategories(recipe)[0] || "sniadanie"}">Opracuj przepis</button>
+      <button class="primary" type="button" data-queue-recipe-id="${recipe.id}" data-queue-category="${recipeCategories(recipe)[0] || "sniadanie"}">${action}</button>
     </article>`).join("");
+    list.innerHTML = `<p class="queue-intro">Wybierz przepis, który chcesz przygotować dla rodziny.</p>
+      ${drafts.length ? `<section class="queue-group"><h2>Wersje robocze <span>${drafts.length}</span></h2><p>Przepisy rozpoczęte przez Kasię — można je dokończyć, sprawdzić i opublikować.</p>${cards(drafts, "Kontynuuj")}</section>` : ""}
+      ${newRecipes.length ? `<section class="queue-group"><h2>Nowe przepisy <span>${newRecipes.length}</span></h2><p>Przepisy czekające na przygotowanie prostej wersji dla rodziny.</p>${cards(newRecipes, "Przygotuj przepis")}</section>` : ""}`;
   } catch {
     list.innerHTML = "<p class=\"empty\">Nie udało się pobrać kolejki.</p>";
   }

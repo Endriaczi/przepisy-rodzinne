@@ -128,6 +128,11 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
 .queue-card h2 { margin: 0; font-size: 1.05rem; }
 .queue-card p { margin: 7px 0 14px; color: #486a70; }
 .queue-card .primary { min-height: 46px; }
+.queue-intro { margin: 0 0 20px; color: #486a70; line-height: 1.45; }
+.queue-group { display: grid; gap: 10px; margin-top: 24px; }
+.queue-group > h2 { display: flex; align-items: center; justify-content: space-between; margin: 0; font-size: 1.05rem; }
+.queue-group > h2 span { min-width: 28px; padding: 3px 8px; border-radius: 999px; background: #d2f1f0; color: #075c64; font-size: .85rem; text-align: center; }
+.queue-group > p { margin: -3px 0 2px; color: #486a70; line-height: 1.4; }
 
 @media (prefers-color-scheme: dark) {
   :root { background: #062a30; color: #e6fbfa; }
@@ -180,4 +185,6 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
   .rule-card__status { color: #75ebe7; }
   .queue-card { border-color: #27757b; background: #0c343a; }
   .queue-card p { color: #b9d9d8; }
+  .queue-intro, .queue-group > p { color: #b9d9d8; }
+  .queue-group > h2 span { background: #164950; color: #75ebe7; }
 }
