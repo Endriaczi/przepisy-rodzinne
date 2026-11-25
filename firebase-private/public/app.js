@@ -968,6 +968,80 @@ document.getElementById("family-version-form").addEventListener("submit", async 
 document.getElementById("family-version-save-draft").addEventListener("click", async () => {
   await saveFamilyVersion(false);
 });
+
+const backupCollections = ["recipes", "recipeReviews", "ingredientRules", "histamineProducts"];
+
+function backupValue(value) {
+  if (value && typeof value.toDate === "function") return { __backupTimestamp: value.toDate().toISOString() };
+  if (Array.isArray(value)) return value.map(backupValue);
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, backupValue(item)]));
+  return value;
+}
+
+function restoreBackupValue(value) {
+  if (Array.isArray(value)) return value.map(restoreBackupValue);
+  if (value && typeof value === "object") {
+    if (typeof value.__backupTimestamp === "string") return new Date(value.__backupTimestamp);
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, restoreBackupValue(item)]));
+  }
+  return value;
+}
+
+async function createBackup() {
+  const snapshots = await Promise.all(backupCollections.map((name) => getDocs(collection(db, name))));
+  return {
+    format: "przepisy-rodzinne-backup",
+    version: 1,
+    createdAt: new Date().toISOString(),
+    collections: Object.fromEntries(snapshots.map((snapshot, index) => [backupCollections[index], snapshot.docs.map((item) => ({ id: item.id, data: backupValue(item.data()) }))]))
+  };
+}
+
+document.getElementById("download-backup").addEventListener("click", async () => {
+  const message = document.getElementById("portrait-message");
+  if (state.role !== "admin") return;
+  message.textContent = "Przygotowuję kopię bezpieczeństwa…";
+  try {
+    const backup = await createBackup();
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `przepisy-rodzinne-kopia-${backup.createdAt.slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    message.textContent = "Kopia bezpieczeństwa została pobrana na to urządzenie.";
+  } catch {
+    message.textContent = "Nie udało się przygotować kopii. Spróbuj ponownie.";
+  }
+});
+
+document.getElementById("restore-backup").addEventListener("change", async (event) => {
+  const input = event.target;
+  const file = input.files[0];
+  const message = document.getElementById("portrait-message");
+  if (!file || state.role !== "admin") return;
+  try {
+    const backup = JSON.parse(await file.text());
+    if (backup.format !== "przepisy-rodzinne-backup" || backup.version !== 1 || !backup.collections || !backupCollections.every((name) => Array.isArray(backup.collections[name]))) throw new Error("invalid backup");
+    const date = backup.createdAt ? new Date(backup.createdAt).toLocaleString("pl-PL") : "nieznaną datą";
+    if (!window.confirm(`Przywrócić kopię z ${date}? Dane zapisane w kopii zastąpią obecne wersje tych samych przepisów i ustaleń. Nowsze dane, których nie ma w kopii, pozostaną bez zmian.`)) return;
+    message.textContent = "Przywracam kopię bezpieczeństwa…";
+    const writes = backupCollections.flatMap((name) => backup.collections[name].map((item) => ({ name, id: item.id, data: restoreBackupValue(item.data) })));
+    for (let offset = 0; offset < writes.length; offset += 400) {
+      const batch = writeBatch(db);
+      writes.slice(offset, offset + 400).forEach((item) => batch.set(doc(db, item.name, item.id), item.data));
+      await batch.commit();
+    }
+    state.histamineProducts = null;
+    state.ingredientRules = null;
+    message.textContent = `Przywrócono kopię: ${writes.length} pozycji.`;
+  } catch {
+    message.textContent = "Nie udało się przywrócić kopii. Wybierz prawidłowy plik kopii bezpieczeństwa.";
+  } finally {
+    input.value = "";
+  }
+});
 document.getElementById("seed-recipes").addEventListener("click", async () => {
   const message = document.getElementById("portrait-message");
   if (state.role !== "admin") return;

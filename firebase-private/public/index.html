@@ -11,7 +11,7 @@
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
     <title>Przepisy rodzinne</title>
-    <link rel="stylesheet" href="style.css?v=20261125-instructions-editor">
+    <link rel="stylesheet" href="style.css?v=20261125-backup">
   </head>
   <body>
     <main class="app">
@@ -43,6 +43,9 @@
           <label class="secondary" for="private-recipe-import">Wczytaj prywatny plik przepisów</label>
           <input id="private-recipe-import" type="file" accept="application/json,.json" hidden>
           <button id="import-histamine" class="secondary" type="button">Importuj bazę Histamina</button>
+          <button id="download-backup" class="secondary" type="button">Pobierz kopię bezpieczeństwa</button>
+          <label class="secondary" for="restore-backup">Przywróć z kopii bezpieczeństwa</label>
+          <input id="restore-backup" type="file" accept="application/json,.json" hidden>
           <p id="portrait-message" class="message" aria-live="polite"></p>
         </section>
       </section>
@@ -179,6 +182,6 @@
         </div>
       </article>
     </dialog>
-    <script type="module" src="app.js?v=20261125-instructions-editor"></script>
+    <script type="module" src="app.js?v=20261125-backup"></script>
   </body>
 </html>
