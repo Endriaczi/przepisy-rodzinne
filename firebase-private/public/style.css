@@ -69,6 +69,7 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
 .admin-diagnostics li + li { margin-top: 10px; }
 .recipe-note, .recipe-source { margin: 8px 0; color: #486a70; line-height: 1.45; font-size: .92rem; }
 .family-note { margin: 12px 0 4px; padding: 10px 12px; border-radius: 11px; background: #e0f5f3; color: #0b626b; line-height: 1.45; font-size: .9rem; }
+.favorite-recipe { width: fit-content; margin: 10px 0 2px; padding: 5px 9px; border-radius: 999px; background: #e0f5f3; color: #075c64; font-size: .8rem; font-weight: 750; }
 .recipe-card details { margin-top: 12px; }
 .recipe-card summary { cursor: pointer; color: #007f87; font-weight: 700; }
 .recipe-card ul, .recipe-card ol { margin: 8px 0 0; padding-left: 20px; color: #486a70; }
@@ -159,6 +160,7 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
   .recipe-card { background: #0d363c; border-color: #27757b; }
   .recipe-card__top span, .recipe-note, .recipe-source, .recipe-card ul, .recipe-card ol { color: #b9d9d8; }
   .family-note { background: #164950; color: #a6f1ed; }
+  .favorite-recipe { background: #164950; color: #a6f1ed; }
   .recipe-card summary, .recipe-card a { color: #75ebe7; }
   .product-rating { color: #75ebe7; }
   .review { background: #5e4e14; color: #fff0bd; }

@@ -255,10 +255,11 @@ function recipeCard(recipe, evaluation, review) {
   const workflow = !recipe.familyRecipe
     ? `<section class="workflow-step"><span>Krok 1 z 3</span><p>Przygotuj prostą wersję przepisu dla rodziny.</p><button class="primary" type="button" data-family-version="${familyVersion}">Przygotuj wersję dla rodziny</button></section>`
     : published
-    ? `<section class="workflow-step workflow-step--done"><span>Opublikowano</span><p>Rodzina widzi już tę wersję przepisu.</p><button class="family-version-button" type="button" data-family-version="${familyVersion}">Zmień opublikowaną wersję</button></section>`
+    ? `<section class="workflow-step workflow-step--done"><span>Opublikowano</span><p>Rodzina widzi już tę wersję przepisu.</p><button class="family-version-button" type="button" data-family-version="${familyVersion}">Zmień opublikowaną wersję</button><button class="family-version-button" type="button" data-favorite-recipe-id="${recipe.id}" data-favorite-value="${recipe.favorite ? "false" : "true"}">${recipe.favorite ? "Usuń z ulubionych" : "Dodaj do ulubionych"}</button></section>`
     : `<section class="workflow-step"><span>Krok 2 z 3</span><p>Zobacz dokładnie, co zobaczy rodzina.</p><button class="primary" type="button" data-family-preview="${familyPreview}">Zobacz podgląd dla rodziny</button><button class="family-version-button" type="button" data-family-version="${familyVersion}">Wróć do edycji wersji</button></section>`;
   return `<article class="recipe-card">
     <div class="recipe-card__top"><h2>${escapeHtml(recipe.title)}</h2>${time}</div>
+    ${recipe.favorite ? `<p class="favorite-recipe">Ulubiony przepis Kasi</p>` : ""}
     ${!editorView && recipe.familyNote ? `<p class="family-note"><b>Wskazówka Kasi:</b> ${escapeHtml(recipe.familyNote)}</p>` : ""}
     <details><summary>${editorView && recipe.familyRecipe ? "Składniki źródłowego przepisu" : "Składniki"}</summary><ul>${ingredients}</ul></details>
     ${instructions ? `<details><summary>${editorView && recipe.familyRecipe ? "Przygotowanie w źródłowym przepisie" : "Przygotowanie"}</summary><ol>${instructions}</ol></details>` : ""}
@@ -364,7 +365,9 @@ async function searchRecipes() {
       }
       return { recipe, evaluation, review };
     });
-    const recipes = evaluated.filter((item) => item.evaluation.visible).sort((left, right) => left.recipe.title.localeCompare(right.recipe.title, "pl"));
+    const recipes = evaluated.filter((item) => item.evaluation.visible).sort((left, right) =>
+      Number(right.recipe.favorite) - Number(left.recipe.favorite) || left.recipe.title.localeCompare(right.recipe.title, "pl")
+    );
     if (!recipes.length) {
       const baseMessage = !isReviewer()
         ? "Kasia nie opublikowała jeszcze gotowego przepisu w tej kategorii."
@@ -720,6 +723,21 @@ function openFamilyPreviewDialog(details) {
 }
 
 document.getElementById("recipe-list").addEventListener("click", async (event) => {
+  const favoriteButton = event.target.closest("button[data-favorite-recipe-id]");
+  if (favoriteButton && isReviewer()) {
+    favoriteButton.disabled = true;
+    try {
+      await setDoc(doc(db, "recipes", favoriteButton.dataset.favoriteRecipeId), {
+        favorite: favoriteButton.dataset.favoriteValue === "true",
+        favoriteUpdatedBy: state.user.email,
+        favoriteUpdatedAt: serverTimestamp()
+      }, { merge: true });
+      await searchRecipes();
+    } finally {
+      favoriteButton.disabled = false;
+    }
+    return;
+  }
   const familyPreviewButton = event.target.closest("button[data-family-preview]");
   if (familyPreviewButton && isReviewer()) {
     openFamilyPreviewDialog(JSON.parse(decodeURIComponent(familyPreviewButton.dataset.familyPreview || "{}")));
