@@ -653,6 +653,17 @@ document.getElementById("review-dialog").addEventListener("click", async (event)
   await openRulesScreen("results", button.dataset.ruleIngredient);
 });
 
+function addFamilyIngredientRow(detail = {}) {
+  const row = document.createElement("div");
+  row.className = "family-ingredient-row";
+  row.innerHTML = `<div class="family-ingredient-main"><input class="family-ingredient-amount" autocomplete="off" placeholder="Ilość, np. 200 g" value="${escapeHtml(detail.amount || "")}"><input class="family-ingredient-name" required autocomplete="off" placeholder="Składnik" value="${escapeHtml(detail.name || "")}"></div><input class="family-ingredient-note" autocomplete="off" placeholder="Uwaga dla rodziny (opcjonalnie)" value="${escapeHtml(detail.note || "")}"><button class="remove-ingredient" type="button">Usuń</button>`;
+  document.getElementById("family-version-ingredients").append(row);
+}
+
+function formatFamilyIngredient(detail) {
+  return `${detail.amount ? `${detail.amount} ` : ""}${detail.name}${detail.note ? ` — ${detail.note}` : ""}`.trim();
+}
+
 async function openFamilyVersionDialog(details) {
   const dialog = document.getElementById("family-version-dialog");
   const familyRecipe = details.familyRecipe || {};
@@ -664,7 +675,12 @@ async function openFamilyVersionDialog(details) {
   const initialIngredients = Array.isArray(familyRecipe.ingredients)
     ? familyRecipe.ingredients
     : details.ingredients.map((ingredient) => saved.get(ingredient) || ingredient);
-  document.getElementById("family-version-ingredients").value = initialIngredients.join("\n");
+  const ingredientsContainer = document.getElementById("family-version-ingredients");
+  ingredientsContainer.replaceChildren();
+  const initialDetails = Array.isArray(familyRecipe.ingredientDetails) && familyRecipe.ingredientDetails.length
+    ? familyRecipe.ingredientDetails
+    : initialIngredients.map((name) => ({ name }));
+  initialDetails.forEach(addFamilyIngredientRow);
   document.getElementById("family-version-instructions").value = (familyRecipe.instructions || details.instructions || []).join("\n");
   document.getElementById("family-version-note").value = familyRecipe.note || "";
   const categoryOptions = document.getElementById("family-version-category-options");
@@ -693,9 +709,15 @@ async function evaluateFamilyVersion(ingredients) {
 }
 
 function readFamilyVersionForm() {
+  const ingredientDetails = [...document.querySelectorAll(".family-ingredient-row")].map((row) => ({
+    amount: row.querySelector(".family-ingredient-amount").value.trim(),
+    name: row.querySelector(".family-ingredient-name").value.trim(),
+    note: row.querySelector(".family-ingredient-note").value.trim()
+  })).filter((detail) => detail.name);
   return {
     title: document.getElementById("family-version-recipe-title").value.trim(),
-    ingredients: document.getElementById("family-version-ingredients").value.split("\n").map((item) => item.trim()).filter(Boolean),
+    ingredients: ingredientDetails.map(formatFamilyIngredient),
+    ingredientDetails,
     instructions: document.getElementById("family-version-instructions").value.split("\n").map((item) => item.trim()).filter(Boolean),
     note: document.getElementById("family-version-note").value.trim(),
     categories: [...document.querySelectorAll("#family-version-category-options input:checked")].map((input) => input.value)
@@ -857,6 +879,17 @@ document.getElementById("publish-dialog-confirm").addEventListener("click", asyn
   }
 });
 document.getElementById("family-version-close").addEventListener("click", closeFamilyVersionDialog);
+document.getElementById("family-version-add-ingredient").addEventListener("click", () => addFamilyIngredientRow());
+document.getElementById("family-version-ingredients").addEventListener("click", (event) => {
+  const remove = event.target.closest("button.remove-ingredient");
+  if (!remove) return;
+  const rows = document.querySelectorAll(".family-ingredient-row");
+  if (rows.length === 1) {
+    rows[0].querySelectorAll("input").forEach((input) => { input.value = ""; });
+    return;
+  }
+  remove.closest(".family-ingredient-row").remove();
+});
 document.getElementById("family-version-dialog").addEventListener("cancel", (event) => {
   if (!hasUnsavedFamilyVersionChanges()) return;
   event.preventDefault();
@@ -873,7 +906,7 @@ async function saveFamilyVersion(openPreview) {
   const recipeId = dialog.dataset.recipeId;
   const message = document.getElementById("family-version-message");
   if (!recipeId) return;
-  const { title, ingredients, instructions, note, categories } = readFamilyVersionForm();
+  const { title, ingredients, ingredientDetails, instructions, note, categories } = readFamilyVersionForm();
   if (!title || !ingredients.length || !instructions.length || !categories.length) {
     message.textContent = "Uzupełnij nazwę, składniki, przygotowanie oraz przynajmniej jedną kategorię.";
     return;
@@ -881,7 +914,7 @@ async function saveFamilyVersion(openPreview) {
   message.textContent = openPreview ? "Przygotowuję podgląd…" : "Zapisuję wersję roboczą…";
   try {
     await setDoc(doc(db, "recipes", recipeId), {
-      familyRecipe: { title, ingredients, instructions, note },
+      familyRecipe: { title, ingredients, ingredientDetails, instructions, note },
       categories,
       category: categories[0],
       familyReady: false,
