@@ -664,6 +664,18 @@ function formatFamilyIngredient(detail) {
   return `${detail.amount ? `${detail.amount} ` : ""}${detail.name}${detail.note ? ` — ${detail.note}` : ""}`.trim();
 }
 
+function addFamilyInstructionRow(instruction = "") {
+  const row = document.createElement("div");
+  row.className = "family-instruction-row";
+  row.innerHTML = `<span class="family-instruction-number"></span><input class="family-instruction-text" required autocomplete="off" placeholder="Opis kroku przygotowania" value="${escapeHtml(instruction)}"><button class="remove-instruction" type="button">Usuń</button>`;
+  document.getElementById("family-version-instructions").append(row);
+  refreshFamilyInstructionNumbers();
+}
+
+function refreshFamilyInstructionNumbers() {
+  document.querySelectorAll(".family-instruction-number").forEach((number, index) => { number.textContent = `${index + 1}.`; });
+}
+
 async function openFamilyVersionDialog(details) {
   const dialog = document.getElementById("family-version-dialog");
   const familyRecipe = details.familyRecipe || {};
@@ -681,7 +693,9 @@ async function openFamilyVersionDialog(details) {
     ? familyRecipe.ingredientDetails
     : initialIngredients.map((name) => ({ name }));
   initialDetails.forEach(addFamilyIngredientRow);
-  document.getElementById("family-version-instructions").value = (familyRecipe.instructions || details.instructions || []).join("\n");
+  const instructionsContainer = document.getElementById("family-version-instructions");
+  instructionsContainer.replaceChildren();
+  (familyRecipe.instructions || details.instructions || []).forEach(addFamilyInstructionRow);
   document.getElementById("family-version-note").value = familyRecipe.note || "";
   const categoryOptions = document.getElementById("family-version-category-options");
   categoryOptions.replaceChildren(...recipeCategoryKeys.map((category) => {
@@ -718,7 +732,7 @@ function readFamilyVersionForm() {
     title: document.getElementById("family-version-recipe-title").value.trim(),
     ingredients: ingredientDetails.map(formatFamilyIngredient),
     ingredientDetails,
-    instructions: document.getElementById("family-version-instructions").value.split("\n").map((item) => item.trim()).filter(Boolean),
+    instructions: [...document.querySelectorAll(".family-instruction-text")].map((input) => input.value.trim()).filter(Boolean),
     note: document.getElementById("family-version-note").value.trim(),
     categories: [...document.querySelectorAll("#family-version-category-options input:checked")].map((input) => input.value)
   };
@@ -889,6 +903,18 @@ document.getElementById("family-version-ingredients").addEventListener("click", 
     return;
   }
   remove.closest(".family-ingredient-row").remove();
+});
+document.getElementById("family-version-add-instruction").addEventListener("click", () => addFamilyInstructionRow());
+document.getElementById("family-version-instructions").addEventListener("click", (event) => {
+  const remove = event.target.closest("button.remove-instruction");
+  if (!remove) return;
+  const rows = document.querySelectorAll(".family-instruction-row");
+  if (rows.length === 1) {
+    rows[0].querySelector("input").value = "";
+    return;
+  }
+  remove.closest(".family-instruction-row").remove();
+  refreshFamilyInstructionNumbers();
 });
 document.getElementById("family-version-dialog").addEventListener("cancel", (event) => {
   if (!hasUnsavedFamilyVersionChanges()) return;

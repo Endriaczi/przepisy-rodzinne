@@ -11,7 +11,7 @@
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
     <title>Przepisy rodzinne</title>
-    <link rel="stylesheet" href="style.css?v=20261125-ingredients-editor">
+    <link rel="stylesheet" href="style.css?v=20261125-instructions-editor">
   </head>
   <body>
     <main class="app">
@@ -144,8 +144,10 @@
           <p class="family-version-hint">Wpisz ilość, składnik i — tylko gdy potrzebne — krótką uwagę dla rodziny.</p>
           <div id="family-version-ingredients" class="family-version-ingredients"></div>
           <button id="family-version-add-ingredient" class="secondary" type="button">Dodaj składnik</button>
-          <label for="family-version-instructions">Przygotowanie dla rodziny</label>
-          <textarea id="family-version-instructions" rows="8" required placeholder="Jeden krok w każdym wierszu"></textarea>
+          <label>Przygotowanie dla rodziny</label>
+          <p class="family-version-hint">Każdy krok przygotowania wpisz osobno. Rodzina zobaczy je w tej kolejności.</p>
+          <div id="family-version-instructions" class="family-version-instructions"></div>
+          <button id="family-version-add-instruction" class="secondary" type="button">Dodaj krok</button>
           <label for="family-version-note">Wskazówka Kasi dla rodziny (opcjonalnie)</label>
           <textarea id="family-version-note" rows="3" placeholder="np. Użyj bardzo świeżego kurczaka."></textarea>
           <p id="family-version-message" class="message" aria-live="polite"></p>
@@ -177,6 +179,6 @@
         </div>
       </article>
     </dialog>
-    <script type="module" src="app.js?v=20261125-ingredients-editor"></script>
+    <script type="module" src="app.js?v=20261125-instructions-editor"></script>
   </body>
 </html>

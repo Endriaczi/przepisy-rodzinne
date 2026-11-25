@@ -115,6 +115,11 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
 .family-ingredient-main { display: grid; grid-template-columns: minmax(105px, .7fr) minmax(0, 1.3fr); gap: 8px; }
 .family-ingredient-row input { min-height: 43px; }
 .remove-ingredient { justify-self: start; border: 0; padding: 3px 0; background: transparent; color: #8b3030; font: inherit; font-size: .82rem; font-weight: 650; text-decoration: underline; }
+.family-version-instructions { display: grid; gap: 10px; margin: 12px 0; }
+.family-instruction-row { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 8px; align-items: center; padding: 10px; border: 1px solid #b8dfdf; border-radius: 12px; }
+.family-instruction-number { color: #0b626b; font-weight: 750; text-align: right; }
+.family-instruction-row input { min-height: 43px; }
+.remove-instruction { grid-column: 2; justify-self: start; border: 0; padding: 3px 0; background: transparent; color: #8b3030; font: inherit; font-size: .82rem; font-weight: 650; text-decoration: underline; }
 .family-version-hint { margin: 6px 0 0; color: #0b626b; font-size: .8rem; line-height: 1.35; }
 .family-preview-section { margin-top: 18px; }
 .family-preview-section h4 { margin: 0 0 8px; font-size: 1rem; }
@@ -189,7 +194,10 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
   .family-version-categories p { color: #b9d9d8; }
   .family-version-row { border-color: #27757b; }
   .family-ingredient-row { border-color: #27757b; }
+  .family-instruction-row { border-color: #27757b; }
+  .family-instruction-number { color: #75ebe7; }
   .remove-ingredient { color: #ffb6af; }
+  .remove-instruction { color: #ffb6af; }
   .family-version-hint { color: #a6f1ed; }
   .rule-card { background: #0c343a; border-color: #27757b; }
   .rule-card__status { color: #75ebe7; }
