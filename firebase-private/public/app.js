@@ -226,7 +226,7 @@ function reviewControls(recipeId, canApprove = true, reasons = [], ingredients =
   return `<div class="review-actions">
     ${canApprove ? `<button type="button" data-review="approved" data-recipe-id="${recipeId}" data-publish-details="${encodedDetails}">Opublikuj</button>` : ""}
     <button type="button" data-review="check" data-recipe-id="${recipeId}" data-review-details="${encodedDetails}">Sprawdź</button>
-    <button type="button" data-review="excluded" data-recipe-id="${recipeId}">Nie publikuj</button>
+    <button type="button" data-review="excluded" data-recipe-id="${recipeId}">Wyklucz z publikacji</button>
   </div>`;
 }
 
@@ -288,7 +288,7 @@ function recipeCard(recipe, evaluation, review, isSaved = false) {
     ${instructions ? `<details><summary>${editorView && recipe.familyRecipe ? "Przygotowanie w źródłowym przepisie" : "Przygotowanie"}</summary><ol>${instructions}</ol></details>` : ""}
     <div class="recipe-card__actions"><button class="save-recipe" type="button" data-save-recipe-id="${recipe.id}" data-save-recipe-value="${isSaved ? "false" : "true"}">${isSaved ? "Usuń zapis" : "Zapisz"}</button>${mealLogAction}</div>
     ${editorView ? workflow : ""}
-    ${editorView ? `<details class="reviewer-more"><summary>Opcje dodatkowe</summary>${evaluation.warnings?.length ? `<section class="ingredient-alert"><span>Informacje do sprawdzenia</span><p>${evaluation.warnings.map(escapeHtml).join("<br>")}</p></section>` : ""}${familyNotes ? `<section class="kasia-assessment"><span>Podpowiedzi dla Kasi</span><ul><li>${familyNotes.replaceAll("<br>", "</li><li>")}</li></ul></section>` : ""}${note ? `<p class="recipe-note">${escapeHtml(note)}</p>` : ""}${recipe.sourceUrl ? `<p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(recipe.publisher)}</a></p>` : `<p class="recipe-source">Źródło: ${escapeHtml(recipe.sourceLabel || recipe.publisher || "Prywatna biblioteka rodzinna")}</p>`}<button class="secondary reviewer-more__button" type="button" data-review="check" data-recipe-id="${recipe.id}" data-review-details="${technicalDetails}">Sprawdź informacje techniczne</button><button class="danger reviewer-more__button" type="button" data-review="excluded" data-recipe-id="${recipe.id}">Nie publikuj tego przepisu</button></details>` : ""}
+    ${editorView ? `<details class="reviewer-more"><summary>Opcje dodatkowe</summary>${evaluation.warnings?.length ? `<section class="ingredient-alert"><span>Informacje do sprawdzenia</span><p>${evaluation.warnings.map(escapeHtml).join("<br>")}</p></section>` : ""}${familyNotes ? `<section class="kasia-assessment"><span>Podpowiedzi dla Kasi</span><ul><li>${familyNotes.replaceAll("<br>", "</li><li>")}</li></ul></section>` : ""}${note ? `<p class="recipe-note">${escapeHtml(note)}</p>` : ""}${recipe.sourceUrl ? `<p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(recipe.publisher)}</a></p>` : `<p class="recipe-source">Źródło: ${escapeHtml(recipe.sourceLabel || recipe.publisher || "Prywatna biblioteka rodzinna")}</p>`}<button class="secondary reviewer-more__button" type="button" data-review="check" data-recipe-id="${recipe.id}" data-review-details="${technicalDetails}">Sprawdź informacje techniczne</button><button class="danger reviewer-more__button" type="button" data-review="excluded" data-recipe-id="${recipe.id}">Wyklucz z publikacji</button></details>` : ""}
   </article>`;
 }
 
@@ -431,7 +431,7 @@ async function renderReviewQueue() {
     list.innerHTML = `<p class="queue-intro">Wybierz przepis, który chcesz przygotować dla rodziny.</p>
       ${drafts.length ? `<section class="queue-group"><h2>Wersje robocze <span>${drafts.length}</span></h2><p>Przepisy rozpoczęte przez Kasię — można je dokończyć, sprawdzić i opublikować.</p>${cards(drafts, "Kontynuuj")}</section>` : ""}
       ${newRecipes.length ? `<section class="queue-group"><h2>Nowe przepisy <span>${newRecipes.length}</span></h2><p>Przepisy czekające na przygotowanie prostej wersji dla rodziny.</p>${cards(newRecipes, "Przygotuj przepis")}</section>` : ""}
-      ${cancelledCards ? `<section class="queue-group queue-group--cancelled"><h2>Anulowane przepisy <span>${cancelledRecipes.length}</span></h2><p>Nie są widoczne dla rodziny. Możesz je przejrzeć i w każdej chwili przywrócić do kolejki.</p>${cancelledCards}</section>` : ""}`;
+      ${cancelledCards ? `<section class="queue-group queue-group--cancelled"><h2>Wykluczone z publikacji <span>${cancelledRecipes.length}</span></h2><p>Nie są widoczne dla rodziny. Możesz je przejrzeć i w każdej chwili przywrócić do kolejki.</p>${cancelledCards}</section>` : ""}`;
   } catch {
     list.innerHTML = "<p class=\"empty\">Nie udało się pobrać kolejki.</p>";
   }
@@ -854,6 +854,7 @@ async function openFamilyVersionDialog(details) {
     return label;
   }));
   dialog.dataset.recipeId = details.id;
+  dialog.dataset.sourceTitle = details.title || "Wersja robocza";
   dialog.dataset.previewDetails = encodeURIComponent(JSON.stringify({ reasons: details.reasons || [] }));
   dialog.dataset.initialVersion = JSON.stringify(readFamilyVersionForm());
   dialog.showModal();
@@ -887,10 +888,12 @@ function hasUnsavedFamilyVersionChanges() {
   return dialog.dataset.initialVersion !== JSON.stringify(readFamilyVersionForm());
 }
 
-function closeFamilyVersionDialog() {
+async function closeFamilyVersionDialog() {
   const dialog = document.getElementById("family-version-dialog");
-  if (hasUnsavedFamilyVersionChanges() && !window.confirm("Masz niezapisane zmiany. Czy na pewno chcesz wrócić bez zapisywania?")) return;
+  if (hasUnsavedFamilyVersionChanges() && !await saveFamilyVersion(false)) return;
   dialog.close();
+  show("queue");
+  await renderReviewQueue();
 }
 
 function openFamilyPreviewDialog(details) {
@@ -1042,7 +1045,9 @@ document.getElementById("publish-dialog-confirm").addEventListener("click", asyn
     event.target.disabled = false;
   }
 });
-document.getElementById("family-version-close").addEventListener("click", closeFamilyVersionDialog);
+document.getElementById("family-version-close").addEventListener("click", async () => {
+  await closeFamilyVersionDialog();
+});
 document.getElementById("family-version-add-ingredient").addEventListener("click", () => addFamilyIngredientRow());
 document.getElementById("family-version-ingredients").addEventListener("click", (event) => {
   const remove = event.target.closest("button.remove-ingredient");
@@ -1067,7 +1072,6 @@ document.getElementById("family-version-instructions").addEventListener("click",
   refreshFamilyInstructionNumbers();
 });
 document.getElementById("family-version-dialog").addEventListener("cancel", (event) => {
-  if (!hasUnsavedFamilyVersionChanges()) return;
   event.preventDefault();
   closeFamilyVersionDialog();
 });
@@ -1095,14 +1099,14 @@ async function saveFamilyVersion(openPreview) {
   const message = document.getElementById("family-version-message");
   if (!recipeId) return false;
   const { title, ingredients, ingredientDetails, instructions, note, categories } = readFamilyVersionForm();
-  if (!title || !ingredients.length || !instructions.length || !categories.length) {
+  if (openPreview && (!title || !ingredients.length || !instructions.length || !categories.length)) {
     message.textContent = "Uzupełnij nazwę, składniki, przygotowanie oraz przynajmniej jedną kategorię.";
     return false;
   }
   message.textContent = openPreview ? "Przygotowuję podgląd…" : "Zapisuję wersję roboczą…";
   try {
     await setDoc(doc(db, "recipes", recipeId), {
-      familyRecipe: { title, ingredients, ingredientDetails, instructions, note },
+      familyRecipe: { title: title || dialog.dataset.sourceTitle || "Wersja robocza", ingredients, ingredientDetails, instructions, note },
       categories,
       category: categories[0],
       familyReady: false,
