@@ -81,10 +81,10 @@
       </section>
 
       <section id="rules-screen" class="screen hidden" aria-labelledby="rules-title">
-        <header class="topbar"><button class="back" data-back="people">Wróć</button><h1 id="rules-title">Ustalenia Kasi dla Emilki</h1></header>
-        <p class="message">Kasia określa tu edytowalne podpowiedzi dotyczące dopuszczenia, warunków i zamienników. W konkretnym przepisie może wybrać inną wersję.</p>
+        <header class="topbar"><button class="back" data-back="people">Wróć</button><h1 id="rules-title">Wspólne zasady Kasi</h1></header>
+        <p class="message">To są zasady obowiązujące we wszystkich przepisach Emilki. Wybór składnika podczas redagowania jednego przepisu pozostaje tylko w tym przepisie.</p>
         <form id="ingredient-rule-form" class="rule-form">
-          <label for="rule-ingredient">Składnik z przepisu</label>
+          <label for="rule-ingredient">Składnik we wszystkich przepisach</label>
           <input id="rule-ingredient" required autocomplete="off" placeholder="np. masło">
           <label for="rule-status">Decyzja Kasi</label>
           <select id="rule-status">
@@ -98,7 +98,7 @@
           <label for="rule-note">Warunek lub notatka</label>
           <textarea id="rule-note" rows="3" placeholder="np. maksymalnie 1 łyżeczka; zgodnie z zaleceniem dietetyka"></textarea>
           <button class="primary" type="submit">Zapisz zasadę</button>
-          <button id="seed-agreed-rules" class="secondary" type="button">Dodaj ustalone zasady: masło, mleko i sól</button>
+          <button id="seed-agreed-rules" class="secondary" type="button">Dodaj ustalone zasady: masło i sól</button>
           <p id="rule-message" class="message" aria-live="polite"></p>
         </form>
         <div id="rules-list" class="rules-list"></div>
@@ -151,14 +151,14 @@
             <div id="family-version-category-options"></div>
           </fieldset>
           <label>Składniki dla rodziny</label>
-          <p class="family-version-hint">Wpisz ilość, składnik i — tylko gdy potrzebne — krótką uwagę dla rodziny.</p>
+          <p class="family-version-hint">Wpisz ilość, dokładny składnik i — tylko gdy potrzebne — krótką uwagę dla rodziny. Te zmiany dotyczą wyłącznie tego przepisu.</p>
           <div id="family-version-ingredients" class="family-version-ingredients"></div>
           <button id="family-version-add-ingredient" class="secondary" type="button">Dodaj składnik</button>
           <label>Przygotowanie dla rodziny</label>
           <p class="family-version-hint">Każdy krok przygotowania wpisz osobno. Rodzina zobaczy je w tej kolejności.</p>
           <div id="family-version-instructions" class="family-version-instructions"></div>
           <button id="family-version-add-instruction" class="secondary" type="button">Dodaj krok</button>
-          <label for="family-version-note">Wskazówka Kasi dla rodziny (opcjonalnie)</label>
+          <label for="family-version-note">Wskazówka Kasi dla rodziny — tylko do tego przepisu (opcjonalnie)</label>
           <textarea id="family-version-note" rows="3" placeholder="np. Użyj bardzo świeżego kurczaka."></textarea>
           <p id="family-version-message" class="message" aria-live="polite"></p>
           <div class="dialog-actions">

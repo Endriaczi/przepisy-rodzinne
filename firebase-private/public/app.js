@@ -588,6 +588,7 @@ async function renderIngredientRules() {
       <p class="rule-card__status">${ruleStatusLabels[rule.status] || "Ustalono"}${rule.replacement ? `: ${escapeHtml(rule.replacement)}` : ""}</p>
       ${rule.note ? `<p>${escapeHtml(rule.note)}</p>` : ""}
       <button class="secondary" type="button" data-edit-rule="${escapeHtml(rule.id)}">Edytuj</button>
+      <button class="remove-rule" type="button" data-delete-rule="${escapeHtml(rule.id)}">Usuń wspólną zasadę</button>
     </article>`).join("");
   } catch {
     list.textContent = "Nie udało się pobrać zasad składników.";
@@ -598,7 +599,7 @@ async function openRulesScreen(returnScreen = "people", ingredient = "") {
   state.rulesReturnScreen = returnScreen;
   document.querySelector("#rules-screen [data-back]").dataset.back = returnScreen;
   document.getElementById("ingredient-rule-form").reset();
-  document.getElementById("rule-message").textContent = ingredient ? `Ustal zasadę dla składnika: ${ingredient}.` : "";
+  document.getElementById("rule-message").textContent = ingredient ? `Ta zasada dotyczy wszystkich przepisów Emilki: ${ingredient}. Jeżeli zmiana ma być tylko w tym jednym przepisie, wróć do jego redakcji.` : "";
   document.getElementById("rule-ingredient").value = ingredient;
   show("rules");
   await renderIngredientRules();
@@ -639,13 +640,29 @@ document.getElementById("ingredient-rule-form").addEventListener("submit", async
   try {
     await saveIngredientRule(rule);
     event.target.reset();
-    message.textContent = "Ustalenie dietetyczne Emilki zostało zapisane.";
+    message.textContent = "Wspólna zasada dla wszystkich przepisów Emilki została zapisana.";
     await renderIngredientRules();
   } catch {
     message.textContent = "Nie udało się zapisać zasady.";
   }
 });
 document.getElementById("rules-list").addEventListener("click", async (event) => {
+  const deleteButton = event.target.closest("button[data-delete-rule]");
+  if (deleteButton) {
+    if (!confirm("Usunąć tę wspólną zasadę? Nie zmieni to gotowych wersji pojedynczych przepisów.")) return;
+    const message = document.getElementById("rule-message");
+    deleteButton.disabled = true;
+    try {
+      await deleteDoc(doc(db, "ingredientRules", deleteButton.dataset.deleteRule));
+      state.ingredientRules = null;
+      message.textContent = "Wspólna zasada została usunięta.";
+      await renderIngredientRules();
+    } catch {
+      message.textContent = "Nie udało się usunąć wspólnej zasady.";
+      deleteButton.disabled = false;
+    }
+    return;
+  }
   const button = event.target.closest("button[data-edit-rule]");
   if (!button) return;
   const rule = (await getIngredientRules()).find((item) => item.id === button.dataset.editRule);
@@ -663,13 +680,12 @@ document.getElementById("seed-agreed-rules").addEventListener("click", async () 
   const agreedRules = [
     { ingredient: "masło", status: "substitute", replacement: "masło klarowane", note: "Zwykłego masła nie używamy." },
     { ingredient: "masło klarowane", status: "allowed", replacement: "", note: "Dopuszczone przez dietetyka." },
-    { ingredient: "mleko", status: "substitute", replacement: "mleko kokosowe", note: "Zwykłe mleko zastępujemy mlekiem kokosowym." },
     { ingredient: "sól", status: "substitute", replacement: "sól niejodowana", note: "Używamy soli niejodowanej." }
   ];
   message.textContent = "Zapisuję ustalone zasady…";
   try {
     for (const rule of agreedRules) await saveIngredientRule(rule);
-    message.textContent = "Dodano cztery ustalenia dietetyczne Emilki.";
+    message.textContent = "Dodano trzy wspólne zasady Emilki.";
     await renderIngredientRules();
   } catch {
     message.textContent = "Nie udało się dodać ustalonych zasad.";
@@ -688,7 +704,7 @@ function openReviewDialog(details) {
       ruleButton.type = "button";
       ruleButton.className = "rule-from-review";
       ruleButton.dataset.ruleIngredient = ingredient;
-      ruleButton.textContent = "Ustal zasadę";
+      ruleButton.textContent = "Ustal zasadę dla wszystkich przepisów";
       item.append(document.createElement("br"), ruleButton);
     }
     return item;
@@ -747,7 +763,7 @@ document.getElementById("review-dialog").addEventListener("click", async (event)
 function addFamilyIngredientRow(detail = {}) {
   const row = document.createElement("div");
   row.className = "family-ingredient-row";
-  row.innerHTML = `<div class="family-ingredient-main"><input class="family-ingredient-amount" autocomplete="off" placeholder="Ilość, np. 200 g" value="${escapeHtml(detail.amount || "")}"><input class="family-ingredient-name" required autocomplete="off" placeholder="Składnik" value="${escapeHtml(detail.name || "")}"></div><input class="family-ingredient-note" autocomplete="off" placeholder="Uwaga dla rodziny (opcjonalnie)" value="${escapeHtml(detail.note || "")}"><button class="remove-ingredient" type="button">Usuń</button>`;
+  row.innerHTML = `<div class="family-ingredient-main"><input class="family-ingredient-amount" autocomplete="off" placeholder="Ilość, np. 200 g" value="${escapeHtml(detail.amount || "")}"><input class="family-ingredient-name" required autocomplete="off" placeholder="Składnik tylko do tego przepisu" value="${escapeHtml(detail.name || "")}"></div><input class="family-ingredient-note" autocomplete="off" placeholder="Uwaga dla rodziny (opcjonalnie)" value="${escapeHtml(detail.note || "")}"><button class="remove-ingredient" type="button">Usuń</button>`;
   document.getElementById("family-version-ingredients").append(row);
 }
 

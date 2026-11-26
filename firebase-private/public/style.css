@@ -148,6 +148,7 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
 .rule-card h2 { margin: 0 0 6px; font-size: 1rem; }
 .rule-card p { margin: 5px 0; line-height: 1.4; }
 .rule-card__status { color: #0b626b; font-weight: 800; }
+.remove-rule { display: block; margin-top: 10px; border: 0; padding: 3px 0; background: transparent; color: #8b3030; font: inherit; font-size: .82rem; font-weight: 650; text-decoration: underline; }
 .queue-card { padding: 16px; border: 1px solid #b8dfdf; border-radius: 15px; background: #effbfa; }
 .queue-card h2 { margin: 0; font-size: 1.05rem; }
 .queue-card p { margin: 7px 0 14px; color: #486a70; }
@@ -218,6 +219,7 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
   .family-version-hint { color: #a6f1ed; }
   .rule-card { background: #0c343a; border-color: #27757b; }
   .rule-card__status { color: #75ebe7; }
+  .remove-rule { color: #ffb6af; }
   .queue-card { border-color: #27757b; background: #0c343a; }
   .queue-card p { color: #b9d9d8; }
   .queue-intro, .queue-group > p { color: #b9d9d8; }
