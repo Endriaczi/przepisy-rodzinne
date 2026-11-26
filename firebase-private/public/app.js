@@ -858,6 +858,7 @@ function closeFamilyVersionDialog() {
 
 function openFamilyPreviewDialog(details) {
   const dialog = document.getElementById("family-preview-dialog");
+  document.getElementById("family-preview-title").textContent = "Podgląd dla rodziny — wersja robocza";
   document.getElementById("family-preview-categories").textContent = details.categories.map((category) => labels[category]).join(" · ");
   document.getElementById("family-preview-recipe-title").textContent = details.title;
   document.getElementById("family-preview-ingredients").replaceChildren(...details.ingredients.map((ingredient) => {
@@ -1033,7 +1034,19 @@ document.getElementById("family-version-dialog").addEventListener("cancel", (eve
   event.preventDefault();
   closeFamilyVersionDialog();
 });
-document.getElementById("family-preview-close").addEventListener("click", () => document.getElementById("family-preview-dialog").close());
+document.getElementById("family-preview-close").addEventListener("click", async () => {
+  const dialog = document.getElementById("family-preview-dialog");
+  const details = JSON.parse(decodeURIComponent(dialog.dataset.publishDetails || "{}"));
+  dialog.close();
+  if (!details.recipeId) return;
+  try {
+    const snapshot = await getDoc(doc(db, "recipes", details.recipeId));
+    if (!snapshot.exists()) throw new Error("recipe missing");
+    await openFamilyVersionDialog({ id: snapshot.id, ...snapshot.data() });
+  } catch {
+    window.alert("Nie udało się wrócić do redakcji. Wersja robocza jest zapisana w Kolejce Kasi.");
+  }
+});
 document.getElementById("family-preview-publish").addEventListener("click", () => {
   const dialog = document.getElementById("family-preview-dialog");
   dialog.close();
@@ -1043,11 +1056,11 @@ async function saveFamilyVersion(openPreview) {
   const dialog = document.getElementById("family-version-dialog");
   const recipeId = dialog.dataset.recipeId;
   const message = document.getElementById("family-version-message");
-  if (!recipeId) return;
+  if (!recipeId) return false;
   const { title, ingredients, ingredientDetails, instructions, note, categories } = readFamilyVersionForm();
   if (!title || !ingredients.length || !instructions.length || !categories.length) {
     message.textContent = "Uzupełnij nazwę, składniki, przygotowanie oraz przynajmniej jedną kategorię.";
-    return;
+    return false;
   }
   message.textContent = openPreview ? "Przygotowuję podgląd…" : "Zapisuję wersję roboczą…";
   try {
@@ -1069,8 +1082,10 @@ async function saveFamilyVersion(openPreview) {
       message.textContent = "Wersja robocza została zapisana. Możesz wrócić później do kolejki.";
     }
     await refreshQueueCount();
+    return true;
   } catch {
     message.textContent = "Nie udało się zapisać wersji dla rodziny.";
+    return false;
   }
 }
 document.getElementById("family-version-form").addEventListener("submit", async (event) => {
@@ -1078,7 +1093,10 @@ document.getElementById("family-version-form").addEventListener("submit", async 
   await saveFamilyVersion(true);
 });
 document.getElementById("family-version-save-draft").addEventListener("click", async () => {
-  await saveFamilyVersion(false);
+  if (!await saveFamilyVersion(false)) return;
+  document.getElementById("family-version-dialog").close();
+  show("queue");
+  await renderReviewQueue();
 });
 
 const backupCollections = ["recipes", "recipeReviews", "ingredientRules", "histamineProducts", "emilkaMealLog"];
