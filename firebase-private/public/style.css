@@ -153,6 +153,11 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
 .queue-card h2 { margin: 0; font-size: 1.05rem; }
 .queue-card p { margin: 7px 0 14px; color: #486a70; }
 .queue-card .primary { min-height: 46px; }
+.queue-card details { margin: 12px 0; }
+.queue-card summary { cursor: pointer; color: #007f87; font-weight: 700; }
+.queue-card ul { margin: 8px 0 0; padding-left: 20px; color: #486a70; line-height: 1.45; }
+.queue-card--cancelled { border-style: dashed; background: #f4fbfa; }
+.queue-group--cancelled { margin-top: 30px; }
 .queue-intro { margin: 0 0 20px; color: #486a70; line-height: 1.45; }
 .queue-group { display: grid; gap: 10px; margin-top: 24px; }
 .queue-group > h2 { display: flex; align-items: center; justify-content: space-between; margin: 0; font-size: 1.05rem; }
@@ -222,6 +227,9 @@ textarea { min-height: 88px; padding: 12px 14px; resize: vertical; }
   .remove-rule { color: #ffb6af; }
   .queue-card { border-color: #27757b; background: #0c343a; }
   .queue-card p { color: #b9d9d8; }
+  .queue-card summary { color: #75ebe7; }
+  .queue-card ul { color: #b9d9d8; }
+  .queue-card--cancelled { background: #0a3035; }
   .queue-intro, .queue-group > p { color: #b9d9d8; }
   .queue-group > h2 span { background: #164950; color: #75ebe7; }
   .meal-log-entry { border-color: #27757b; background: #0c343a; }

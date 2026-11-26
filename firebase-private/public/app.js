@@ -374,9 +374,17 @@ async function renderEmilkaLog() {
   }
 }
 
-async function getQueueRecipes() {
+async function getQueueData() {
   const [recipesSnapshot, reviews] = await Promise.all([getDocs(collection(db, "recipes")), getRecipeReviews()]);
-  return recipesSnapshot.docs.map((item) => item.data()).filter((recipe) => !recipe.familyReady && reviews[recipe.id]?.status !== "excluded");
+  return {
+    recipes: recipesSnapshot.docs.map((item) => ({ ...item.data(), id: item.id })),
+    reviews
+  };
+}
+
+async function getQueueRecipes() {
+  const { recipes, reviews } = await getQueueData();
+  return recipes.filter((recipe) => !recipe.familyReady && reviews[recipe.id]?.status !== "excluded");
 }
 
 async function refreshQueueCount() {
@@ -395,12 +403,14 @@ async function renderReviewQueue() {
   const list = document.getElementById("queue-list");
   list.innerHTML = "<p class=\"message\">Pobieram kolejkę…</p>";
   try {
-    const recipes = await getQueueRecipes();
-    if (!recipes.length) {
+    const { recipes, reviews } = await getQueueData();
+    const activeRecipes = recipes.filter((recipe) => !recipe.familyReady && reviews[recipe.id]?.status !== "excluded");
+    const cancelledRecipes = recipes.filter((recipe) => !recipe.familyReady && reviews[recipe.id]?.status === "excluded");
+    if (!activeRecipes.length && !cancelledRecipes.length) {
       list.innerHTML = "<p class=\"empty\">Nie ma przepisów oczekujących na opracowanie.</p>";
       return;
     }
-    const sorted = recipes.sort((left, right) => left.title.localeCompare(right.title, "pl"));
+    const sorted = activeRecipes.sort((left, right) => left.title.localeCompare(right.title, "pl"));
     const newRecipes = sorted.filter((recipe) => !recipe.familyRecipe);
     const drafts = sorted.filter((recipe) => recipe.familyRecipe);
     const cards = (items, action) => items.map((recipe) => `<article class="queue-card">
@@ -408,9 +418,20 @@ async function renderReviewQueue() {
       <p>${recipeCategoryLabel(recipe)}</p>
       <button class="primary" type="button" data-queue-recipe-id="${recipe.id}" data-queue-category="${recipeCategories(recipe)[0] || "sniadanie"}">${action}</button>
     </article>`).join("");
+    const cancelledCards = cancelledRecipes.sort((left, right) => left.title.localeCompare(right.title, "pl")).map((recipe) => {
+      const version = recipe.familyRecipe || recipe;
+      const ingredients = (version.ingredients || []).map((ingredient) => `<li>${escapeHtml(ingredient)}</li>`).join("");
+      return `<article class="queue-card queue-card--cancelled">
+        <h2>${escapeHtml(recipe.title)}</h2>
+        <p>Nieopublikowany przepis — niewidoczny dla rodziny.</p>
+        <details><summary>Zobacz składniki</summary><ul>${ingredients || "<li>Brak zapisanych składników.</li>"}</ul></details>
+        <button class="secondary" type="button" data-restore-recipe-id="${recipe.id}">Przywróć do kolejki</button>
+      </article>`;
+    }).join("");
     list.innerHTML = `<p class="queue-intro">Wybierz przepis, który chcesz przygotować dla rodziny.</p>
       ${drafts.length ? `<section class="queue-group"><h2>Wersje robocze <span>${drafts.length}</span></h2><p>Przepisy rozpoczęte przez Kasię — można je dokończyć, sprawdzić i opublikować.</p>${cards(drafts, "Kontynuuj")}</section>` : ""}
-      ${newRecipes.length ? `<section class="queue-group"><h2>Nowe przepisy <span>${newRecipes.length}</span></h2><p>Przepisy czekające na przygotowanie prostej wersji dla rodziny.</p>${cards(newRecipes, "Przygotuj przepis")}</section>` : ""}`;
+      ${newRecipes.length ? `<section class="queue-group"><h2>Nowe przepisy <span>${newRecipes.length}</span></h2><p>Przepisy czekające na przygotowanie prostej wersji dla rodziny.</p>${cards(newRecipes, "Przygotuj przepis")}</section>` : ""}
+      ${cancelledCards ? `<section class="queue-group queue-group--cancelled"><h2>Anulowane przepisy <span>${cancelledRecipes.length}</span></h2><p>Nie są widoczne dla rodziny. Możesz je przejrzeć i w każdej chwili przywrócić do kolejki.</p>${cancelledCards}</section>` : ""}`;
   } catch {
     list.innerHTML = "<p class=\"empty\">Nie udało się pobrać kolejki.</p>";
   }
@@ -614,6 +635,22 @@ document.getElementById("review-queue-button").addEventListener("click", async (
   await renderReviewQueue();
 });
 document.getElementById("queue-list").addEventListener("click", async (event) => {
+  const restoreButton = event.target.closest("button[data-restore-recipe-id]");
+  if (restoreButton && isReviewer()) {
+    restoreButton.disabled = true;
+    try {
+      await setDoc(doc(db, "recipeReviews", restoreButton.dataset.restoreRecipeId), {
+        status: "check",
+        restoredBy: state.user.email,
+        restoredAt: serverTimestamp()
+      }, { merge: true });
+      await refreshQueueCount();
+      await renderReviewQueue();
+    } finally {
+      restoreButton.disabled = false;
+    }
+    return;
+  }
   const button = event.target.closest("button[data-queue-recipe-id]");
   if (!button || !isReviewer()) return;
   state.person = "emilka";
