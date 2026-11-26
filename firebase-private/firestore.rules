@@ -54,6 +54,14 @@ service cloud.firestore {
       allow read, create, update, delete: if isAllowedFamilyMember() && request.auth.uid == userId;
     }
 
+    match /emilkaMealLog/{entryId} {
+      allow create: if isAdministrator() || (isAllowedFamilyMember() &&
+        request.resource.data.createdByUid == request.auth.uid);
+      allow read: if canReviewRecipes() ||
+        (isAllowedFamilyMember() && resource.data.createdByUid == request.auth.uid);
+      allow update, delete: if false;
+    }
+
     match /settings/{settingId} {
       allow read: if isAllowedFamilyMember();
       allow write: if false;

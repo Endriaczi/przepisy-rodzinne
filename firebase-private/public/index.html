@@ -11,7 +11,7 @@
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
     <title>Przepisy rodzinne</title>
-    <link rel="stylesheet" href="style.css?v=20261125-backup">
+    <link rel="stylesheet" href="style.css?v=20261126-dziennik">
   </head>
   <body>
     <main class="app">
@@ -26,7 +26,7 @@
       </section>
 
       <section id="people-screen" class="screen people-screen hidden" aria-label="Wybór osoby">
-        <header class="account"><span id="account-name"></span><span class="account-actions"><button id="review-queue-button" hidden>Kolejka</button><button id="family-rules-button" hidden>Ustalenia Kasi</button><button id="logout-button">Wyloguj</button></span></header>
+        <header class="account"><span id="account-name"></span><span class="account-actions"><button id="review-queue-button" hidden>Kolejka</button><button id="family-rules-button" hidden>Ustalenia Kasi</button><button id="emilka-log-button" hidden>Dziennik Emilki</button><button id="logout-button">Wyloguj</button></span></header>
         <button class="person-card" data-person="emilka" aria-label="Wybierz Emilkę">
           <span id="portrait-emilka" class="portrait">Zdjęcie Emilki<br>dodamy po zabezpieczeniu plików</span>
         </button>
@@ -70,7 +70,14 @@
       <section id="results-screen" class="screen hidden" aria-labelledby="results-title">
         <header class="topbar"><button class="back" data-back="search">Zmień wybór</button><h1 id="results-title">Przepisy</h1></header>
         <p id="result-summary" class="message"></p>
+        <button id="add-manual-meal" class="secondary meal-log-manual" type="button" hidden>Dodaj własny posiłek Emilki</button>
         <div id="recipe-list" class="empty" aria-live="polite"></div>
+      </section>
+
+      <section id="emilka-log-screen" class="screen hidden" aria-labelledby="emilka-log-title">
+        <header class="topbar"><button class="back" data-back="people">Wróć</button><h1 id="emilka-log-title">Dziennik Emilki</h1></header>
+        <p class="message">To zapis posiłków i obserwacji, nie ocena medyczna. Pomaga sprawdzić, co Emilka jadła w określonym czasie.</p>
+        <div id="emilka-log-list" class="meal-log-list" aria-live="polite"></div>
       </section>
 
       <section id="rules-screen" class="screen hidden" aria-labelledby="rules-title">
@@ -182,6 +189,49 @@
         </div>
       </article>
     </dialog>
-    <script type="module" src="app.js?v=20261125-backup"></script>
+    <dialog id="meal-log-dialog" class="review-dialog" aria-labelledby="meal-log-title">
+      <article>
+        <h2 id="meal-log-title">Zapisz posiłek Emilki</h2>
+        <p id="meal-log-recipe" class="product-rating"></p>
+        <p class="recipe-note">Składniki tego przepisu zostaną zapisane automatycznie.</p>
+        <form id="meal-log-form">
+          <label for="meal-log-when">Kiedy jadła?</label>
+          <input id="meal-log-when" type="datetime-local" required>
+          <label for="meal-log-place">Gdzie? <span class="optional">(opcjonalnie)</span></label>
+          <input id="meal-log-place" autocomplete="off" placeholder="np. u babci">
+          <label for="meal-log-note">Krótka uwaga <span class="optional">(opcjonalnie)</span></label>
+          <textarea id="meal-log-note" rows="3" maxlength="500" placeholder="np. zjadła całą porcję"></textarea>
+          <p id="meal-log-message" class="message" aria-live="polite"></p>
+          <div class="dialog-actions">
+            <button class="primary" type="submit">Zapisz w dzienniku</button>
+            <button id="meal-log-close" class="secondary" type="button">Wróć</button>
+          </div>
+        </form>
+      </article>
+    </dialog>
+    <dialog id="manual-meal-dialog" class="review-dialog" aria-labelledby="manual-meal-title">
+      <article>
+        <h2 id="manual-meal-title">Własny posiłek Emilki</h2>
+        <p class="recipe-note">Użyj tylko wtedy, gdy posiłku nie ma w przepisach.</p>
+        <form id="manual-meal-form">
+          <label for="manual-meal-title-input">Co jadła?</label>
+          <input id="manual-meal-title-input" required maxlength="120" autocomplete="off" placeholder="np. rosół u babci">
+          <label for="manual-meal-ingredients">Składniki, które pamiętasz</label>
+          <textarea id="manual-meal-ingredients" rows="5" required maxlength="1000" placeholder="Wpisz po jednym składniku w każdej linii"></textarea>
+          <label for="manual-meal-when">Kiedy jadła?</label>
+          <input id="manual-meal-when" type="datetime-local" required>
+          <label for="manual-meal-place">Gdzie? <span class="optional">(opcjonalnie)</span></label>
+          <input id="manual-meal-place" autocomplete="off" placeholder="np. u babci">
+          <label for="manual-meal-note">Krótka uwaga <span class="optional">(opcjonalnie)</span></label>
+          <textarea id="manual-meal-note" rows="3" maxlength="500" placeholder="np. zjadła małą porcję"></textarea>
+          <p id="manual-meal-message" class="message" aria-live="polite"></p>
+          <div class="dialog-actions">
+            <button class="primary" type="submit">Zapisz w dzienniku</button>
+            <button id="manual-meal-close" class="secondary" type="button">Wróć</button>
+          </div>
+        </form>
+      </article>
+    </dialog>
+    <script type="module" src="app.js?v=20261126-dziennik"></script>
   </body>
 </html>

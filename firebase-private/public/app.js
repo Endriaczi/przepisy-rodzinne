@@ -40,6 +40,20 @@ const ratingLabels = { "0": "DOBRZE TOLEROWANE", "1": "UMIARKOWANA", "2": "NIEZG
 const ruleStatusLabels = { allowed: "Dopuszczony", conditional: "Dopuszczony warunkowo", substitute: "Zamień na", excluded: "Nie używamy" };
 const isReviewer = () => ["admin", "reviewer"].includes(state.role);
 
+function localDateTimeValue(date = new Date()) {
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 16);
+}
+
+function mealLogDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? new Date() : date;
+}
+
+function mealLogIngredients(value) {
+  return [...new Set(String(value || "").split(/[\n,]/).map((item) => item.trim()).filter(Boolean))].slice(0, 60);
+}
+
 function words(text) {
   return foldText(text).split(" ").filter(Boolean).map((word) => eggWords.includes(word) ? "jajko" : word);
 }
@@ -253,6 +267,14 @@ function recipeCard(recipe, evaluation, review, isSaved = false) {
   }));
   const emilkaFavorite = recipe.emilkaFavorite ?? recipe.favorite ?? false;
   const published = recipe.familyReady && review?.status === "approved" && !recipe.needsRepublish;
+  const mealLogDetails = encodeURIComponent(JSON.stringify({
+    recipeId: recipe.id,
+    recipeTitle: recipe.title,
+    ingredients: recipe.ingredients || []
+  }));
+  const mealLogAction = state.person === "emilka" && recipe.familyReady && !editorView
+    ? `<button class="meal-log-button" type="button" data-meal-log-recipe="${mealLogDetails}">Emilka zjadła ten przepis</button>`
+    : "";
   const workflow = !recipe.familyRecipe
     ? `<section class="workflow-step"><span>Krok 1 z 3</span><p>Przygotuj prostą wersję przepisu dla rodziny.</p><button class="primary" type="button" data-family-version="${familyVersion}">Przygotuj wersję dla rodziny</button></section>`
     : published
@@ -264,7 +286,7 @@ function recipeCard(recipe, evaluation, review, isSaved = false) {
     ${!editorView && recipe.familyNote ? `<p class="family-note"><b>Wskazówka Kasi:</b> ${escapeHtml(recipe.familyNote)}</p>` : ""}
     <details><summary>${editorView && recipe.familyRecipe ? "Składniki źródłowego przepisu" : "Składniki"}</summary><ul>${ingredients}</ul></details>
     ${instructions ? `<details><summary>${editorView && recipe.familyRecipe ? "Przygotowanie w źródłowym przepisie" : "Przygotowanie"}</summary><ol>${instructions}</ol></details>` : ""}
-    <button class="save-recipe" type="button" data-save-recipe-id="${recipe.id}" data-save-recipe-value="${isSaved ? "false" : "true"}">${isSaved ? "Usuń zapis" : "Zapisz"}</button>
+    <div class="recipe-card__actions"><button class="save-recipe" type="button" data-save-recipe-id="${recipe.id}" data-save-recipe-value="${isSaved ? "false" : "true"}">${isSaved ? "Usuń zapis" : "Zapisz"}</button>${mealLogAction}</div>
     ${editorView ? workflow : ""}
     ${editorView ? `<details class="reviewer-more"><summary>Opcje dodatkowe</summary>${evaluation.warnings?.length ? `<section class="ingredient-alert"><span>Informacje do sprawdzenia</span><p>${evaluation.warnings.map(escapeHtml).join("<br>")}</p></section>` : ""}${familyNotes ? `<section class="kasia-assessment"><span>Podpowiedzi dla Kasi</span><ul><li>${familyNotes.replaceAll("<br>", "</li><li>")}</li></ul></section>` : ""}${note ? `<p class="recipe-note">${escapeHtml(note)}</p>` : ""}${recipe.sourceUrl ? `<p class="recipe-source">Źródło: <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(recipe.publisher)}</a></p>` : `<p class="recipe-source">Źródło: ${escapeHtml(recipe.sourceLabel || recipe.publisher || "Prywatna biblioteka rodzinna")}</p>`}<button class="secondary reviewer-more__button" type="button" data-review="check" data-recipe-id="${recipe.id}" data-review-details="${technicalDetails}">Sprawdź informacje techniczne</button><button class="danger reviewer-more__button" type="button" data-review="excluded" data-recipe-id="${recipe.id}">Nie publikuj tego przepisu</button></details>` : ""}
   </article>`;
@@ -287,6 +309,69 @@ async function getSavedRecipeIds() {
   const snapshot = await getDocs(collection(db, "userFavorites", state.user.uid, "recipes"));
   state.savedRecipeIds = new Set(snapshot.docs.map((item) => item.id));
   return state.savedRecipeIds;
+}
+
+function openRecipeMealLog(details) {
+  const dialog = document.getElementById("meal-log-dialog");
+  document.getElementById("meal-log-recipe").textContent = details.recipeTitle || "Wybrany przepis";
+  document.getElementById("meal-log-when").value = localDateTimeValue();
+  document.getElementById("meal-log-place").value = "";
+  document.getElementById("meal-log-note").value = "";
+  document.getElementById("meal-log-message").textContent = "";
+  dialog.dataset.mealDetails = encodeURIComponent(JSON.stringify(details));
+  dialog.showModal();
+}
+
+function openManualMealLog() {
+  const dialog = document.getElementById("manual-meal-dialog");
+  document.getElementById("manual-meal-title-input").value = "";
+  document.getElementById("manual-meal-ingredients").value = "";
+  document.getElementById("manual-meal-when").value = localDateTimeValue();
+  document.getElementById("manual-meal-place").value = "";
+  document.getElementById("manual-meal-note").value = "";
+  document.getElementById("manual-meal-message").textContent = "";
+  dialog.showModal();
+}
+
+async function saveMealLogEntry(entry) {
+  if (!state.user) throw new Error("Brak zalogowanego użytkownika.");
+  await setDoc(doc(collection(db, "emilkaMealLog")), {
+    ...entry,
+    createdByUid: state.user.uid,
+    createdByEmail: state.user.email || "",
+    createdAt: serverTimestamp()
+  });
+}
+
+function formatMealLogDate(value) {
+  const date = value?.toDate ? value.toDate() : value instanceof Date ? value : new Date(value);
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "Nieznana data";
+  return new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+
+async function renderEmilkaLog() {
+  const list = document.getElementById("emilka-log-list");
+  list.innerHTML = "<p class=\"message\">Pobieram dziennik…</p>";
+  try {
+    const snapshot = await getDocs(collection(db, "emilkaMealLog"));
+    const entries = snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort((left, right) => {
+      const leftTime = left.occurredAt?.toMillis?.() || 0;
+      const rightTime = right.occurredAt?.toMillis?.() || 0;
+      return rightTime - leftTime;
+    });
+    if (!entries.length) {
+      list.innerHTML = "<p class=\"empty\">Nie ma jeszcze zapisanych posiłków Emilki.</p>";
+      return;
+    }
+    list.innerHTML = entries.map((entry) => `<article class="meal-log-entry">
+      <p class="meal-log-entry__date">${escapeHtml(formatMealLogDate(entry.occurredAt))}${entry.place ? ` · ${escapeHtml(entry.place)}` : ""}</p>
+      <h2>${escapeHtml(entry.title || "Posiłek Emilki")}</h2>
+      <details><summary>Składniki (${(entry.ingredients || []).length})</summary><ul>${(entry.ingredients || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></details>
+      ${entry.note ? `<p class="meal-log-entry__note">Uwaga: ${escapeHtml(entry.note)}</p>` : ""}
+    </article>`).join("");
+  } catch {
+    list.innerHTML = "<p class=\"empty\">Nie udało się pobrać dziennika Emilki.</p>";
+  }
 }
 
 async function getQueueRecipes() {
@@ -448,6 +533,7 @@ onAuthStateChanged(auth, async (user) => {
     document.getElementById("account-name").textContent = user.email;
     document.getElementById("portrait-admin").hidden = access.role !== "admin";
     document.getElementById("family-rules-button").hidden = !["admin", "reviewer"].includes(access.role);
+    document.getElementById("emilka-log-button").hidden = !["admin", "reviewer"].includes(access.role);
     await refreshQueueCount();
     loadPortrait("emilka");
     loadPortrait("kasia");
@@ -465,6 +551,11 @@ document.getElementById("login-button").addEventListener("click", async () => {
 });
 
 document.getElementById("logout-button").addEventListener("click", () => signOut(auth));
+document.getElementById("emilka-log-button").addEventListener("click", async () => {
+  if (!isReviewer()) return;
+  show("emilka-log");
+  await renderEmilkaLog();
+});
 function escapeHtml(text) {
   return String(text || "").replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 }
@@ -771,6 +862,11 @@ function openFamilyPreviewDialog(details) {
 }
 
 document.getElementById("recipe-list").addEventListener("click", async (event) => {
+  const mealLogButton = event.target.closest("button[data-meal-log-recipe]");
+  if (mealLogButton && state.person === "emilka") {
+    openRecipeMealLog(JSON.parse(decodeURIComponent(mealLogButton.dataset.mealLogRecipe || "{}")));
+    return;
+  }
   const savedButton = event.target.closest("button[data-save-recipe-id]");
   if (savedButton && state.user) {
     savedButton.disabled = true;
@@ -969,7 +1065,7 @@ document.getElementById("family-version-save-draft").addEventListener("click", a
   await saveFamilyVersion(false);
 });
 
-const backupCollections = ["recipes", "recipeReviews", "ingredientRules", "histamineProducts"];
+const backupCollections = ["recipes", "recipeReviews", "ingredientRules", "histamineProducts", "emilkaMealLog"];
 
 function backupValue(value) {
   if (value && typeof value.toDate === "function") return { __backupTimestamp: value.toDate().toISOString() };
@@ -1181,8 +1277,71 @@ document.getElementById("change-category").addEventListener("click", () => {
 document.getElementById("show-results").addEventListener("click", async () => {
   setResultsBack("search", "Zmień wybór");
   document.getElementById("result-summary").textContent = `${labels[state.person]} · ${labels[state.category]}`;
+  document.getElementById("add-manual-meal").hidden = state.person !== "emilka";
   show("results");
   await searchRecipes();
+});
+document.getElementById("add-manual-meal").addEventListener("click", () => {
+  if (state.person === "emilka") openManualMealLog();
+});
+document.getElementById("meal-log-close").addEventListener("click", () => document.getElementById("meal-log-dialog").close());
+document.getElementById("manual-meal-close").addEventListener("click", () => document.getElementById("manual-meal-dialog").close());
+document.getElementById("meal-log-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const dialog = document.getElementById("meal-log-dialog");
+  const message = document.getElementById("meal-log-message");
+  const submit = event.submitter;
+  const details = JSON.parse(decodeURIComponent(dialog.dataset.mealDetails || "{}"));
+  if (!details.recipeId || !details.recipeTitle || !Array.isArray(details.ingredients)) {
+    message.textContent = "Nie udało się odczytać przepisu. Wróć i wybierz go ponownie.";
+    return;
+  }
+  submit.disabled = true;
+  message.textContent = "Zapisuję posiłek…";
+  try {
+    await saveMealLogEntry({
+      sourceType: "recipe",
+      recipeId: details.recipeId,
+      title: details.recipeTitle,
+      ingredients: details.ingredients.slice(0, 60),
+      occurredAt: mealLogDate(document.getElementById("meal-log-when").value),
+      place: document.getElementById("meal-log-place").value.trim().slice(0, 120),
+      note: document.getElementById("meal-log-note").value.trim().slice(0, 500)
+    });
+    dialog.close();
+  } catch {
+    message.textContent = "Nie udało się zapisać posiłku. Spróbuj ponownie.";
+  } finally {
+    submit.disabled = false;
+  }
+});
+document.getElementById("manual-meal-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const message = document.getElementById("manual-meal-message");
+  const submit = event.submitter;
+  const title = document.getElementById("manual-meal-title-input").value.trim();
+  const ingredients = mealLogIngredients(document.getElementById("manual-meal-ingredients").value);
+  if (!title || !ingredients.length) {
+    message.textContent = "Wpisz nazwę posiłku oraz przynajmniej jeden składnik.";
+    return;
+  }
+  submit.disabled = true;
+  message.textContent = "Zapisuję posiłek…";
+  try {
+    await saveMealLogEntry({
+      sourceType: "manual",
+      title: title.slice(0, 120),
+      ingredients,
+      occurredAt: mealLogDate(document.getElementById("manual-meal-when").value),
+      place: document.getElementById("manual-meal-place").value.trim().slice(0, 120),
+      note: document.getElementById("manual-meal-note").value.trim().slice(0, 500)
+    });
+    document.getElementById("manual-meal-dialog").close();
+  } catch {
+    message.textContent = "Nie udało się zapisać posiłku. Spróbuj ponownie.";
+  } finally {
+    submit.disabled = false;
+  }
 });
 document.querySelectorAll("[data-back]").forEach((button) => button.addEventListener("click", async () => {
   if (button.dataset.back === "queue") {
