@@ -21,8 +21,8 @@ service cloud.firestore {
     }
 
     match /allowedUsers/{email} {
-      allow get: if signedIn() && request.auth.token.email == email;
-      allow list, create, update, delete: if false;
+      allow get: if isAdministrator() || (signedIn() && request.auth.token.email == email);
+      allow list, create, update, delete: if isAdministrator();
     }
 
     match /recipes/{recipeId} {
@@ -51,7 +51,8 @@ service cloud.firestore {
     }
 
     match /userFavorites/{userId}/recipes/{recipeId} {
-      allow read, create, update, delete: if isAllowedFamilyMember() && request.auth.uid == userId;
+      allow read, create, update, delete: if isAdministrator() ||
+        (isAllowedFamilyMember() && request.auth.uid == userId);
     }
 
     match /emilkaMealLog/{entryId} {

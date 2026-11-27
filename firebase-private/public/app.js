@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-import { getFirestore, collection, doc, getDoc, getDocs, query, where, limit, writeBatch, setDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+import { getFirestore, collection, collectionGroup, doc, getDoc, getDocs, query, where, limit, writeBatch, setDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { getStorage, ref, getDownloadURL, uploadBytes } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-storage.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { recipeSeed } from "./recipe-seed.js";
@@ -39,6 +39,8 @@ const saltTerms = ["sol", "sol morska", "salt"];
 const ratingLabels = { "0": "DOBRZE TOLEROWANE", "1": "UMIARKOWANA", "2": "NIEZGODNE", "3": "BARDZO ŹLE", "?": "BRAK DANYCH" };
 const ruleStatusLabels = { allowed: "Dopuszczony", conditional: "Dopuszczony warunkowo", substitute: "Zamień na", excluded: "Nie używamy" };
 const isReviewer = () => ["admin", "reviewer"].includes(state.role);
+let draftSaveTimer = null;
+let automaticDraftSaveInProgress = false;
 
 function localDateTimeValue(date = new Date()) {
   const offset = date.getTimezoneOffset();
@@ -822,6 +824,7 @@ function refreshFamilyInstructionNumbers() {
 
 async function openFamilyVersionDialog(details) {
   const dialog = document.getElementById("family-version-dialog");
+  clearTimeout(draftSaveTimer);
   const familyRecipe = details.familyRecipe || {};
   const saved = new Map((details.familyIngredients || []).map((item) => [item.source, item.display]));
   const categories = details.categories?.length ? details.categories : ["kolacja_przekaska"];
@@ -890,6 +893,7 @@ function hasUnsavedFamilyVersionChanges() {
 
 async function closeFamilyVersionDialog() {
   const dialog = document.getElementById("family-version-dialog");
+  clearTimeout(draftSaveTimer);
   if (hasUnsavedFamilyVersionChanges() && !await saveFamilyVersion(false)) return;
   dialog.close();
   show("queue");
@@ -1093,7 +1097,8 @@ document.getElementById("family-preview-publish").addEventListener("click", () =
   dialog.close();
   openPublishDialog(JSON.parse(decodeURIComponent(dialog.dataset.publishDetails || "{}")));
 });
-async function saveFamilyVersion(openPreview) {
+async function saveFamilyVersion(openPreview, quiet = false) {
+  clearTimeout(draftSaveTimer);
   const dialog = document.getElementById("family-version-dialog");
   const recipeId = dialog.dataset.recipeId;
   const message = document.getElementById("family-version-message");
@@ -1103,7 +1108,7 @@ async function saveFamilyVersion(openPreview) {
     message.textContent = "Uzupełnij nazwę, składniki, przygotowanie oraz przynajmniej jedną kategorię.";
     return false;
   }
-  message.textContent = openPreview ? "Przygotowuję podgląd…" : "Zapisuję wersję roboczą…";
+  if (!quiet) message.textContent = openPreview ? "Przygotowuję podgląd…" : "Zapisuję wersję roboczą…";
   try {
     await setDoc(doc(db, "recipes", recipeId), {
       familyRecipe: { title: title || dialog.dataset.sourceTitle || "Wersja robocza", ingredients, ingredientDetails, instructions, note },
@@ -1119,7 +1124,7 @@ async function saveFamilyVersion(openPreview) {
       dialog.close();
       const reasons = await evaluateFamilyVersion(ingredients);
       openFamilyPreviewDialog({ recipeId, title, categories, ingredients, instructions, note, reasons });
-    } else {
+    } else if (!quiet) {
       message.textContent = "Wersja robocza została zapisana. Możesz wrócić później do kolejki.";
     }
     await refreshQueueCount();
@@ -1133,6 +1138,21 @@ document.getElementById("family-version-form").addEventListener("submit", async 
   event.preventDefault();
   await saveFamilyVersion(true);
 });
+document.getElementById("family-version-form").addEventListener("input", () => {
+  const dialog = document.getElementById("family-version-dialog");
+  if (!dialog.open || automaticDraftSaveInProgress) return;
+  clearTimeout(draftSaveTimer);
+  draftSaveTimer = setTimeout(async () => {
+    if (!dialog.open || !hasUnsavedFamilyVersionChanges() || automaticDraftSaveInProgress) return;
+    automaticDraftSaveInProgress = true;
+    const saved = await saveFamilyVersion(false, true);
+    if (saved && dialog.open) document.getElementById("family-version-message").textContent = "Zapisano roboczo.";
+    automaticDraftSaveInProgress = false;
+  }, 1200);
+});
+document.getElementById("family-version-form").addEventListener("change", () => {
+  document.getElementById("family-version-form").dispatchEvent(new Event("input", { bubbles: true }));
+});
 document.getElementById("family-version-save-draft").addEventListener("click", async () => {
   if (!await saveFamilyVersion(false)) return;
   document.getElementById("family-version-dialog").close();
@@ -1140,7 +1160,8 @@ document.getElementById("family-version-save-draft").addEventListener("click", a
   await renderReviewQueue();
 });
 
-const backupCollections = ["recipes", "recipeReviews", "ingredientRules", "histamineProducts", "emilkaMealLog"];
+const legacyBackupCollections = ["recipes", "recipeReviews", "ingredientRules", "histamineProducts", "emilkaMealLog"];
+const backupCollections = [...legacyBackupCollections, "allowedUsers"];
 
 function backupValue(value) {
   if (value && typeof value.toDate === "function") return { __backupTimestamp: value.toDate().toISOString() };
@@ -1159,12 +1180,37 @@ function restoreBackupValue(value) {
 }
 
 async function createBackup() {
-  const snapshots = await Promise.all(backupCollections.map((name) => getDocs(collection(db, name))));
+  const [snapshots, favoriteSnapshot, portraits] = await Promise.all([
+    Promise.all(backupCollections.map((name) => getDocs(collection(db, name)))),
+    getDocs(collectionGroup(db, "recipes")),
+    Promise.all(["emilka", "kasia"].map(async (person) => {
+      try {
+        const url = await getDownloadURL(ref(storage, `portraits/${person}.jpg`));
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("portrait unavailable");
+        const blob = await response.blob();
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(blob);
+        });
+        return { person, contentType: blob.type || "image/jpeg", dataUrl };
+      } catch {
+        return null;
+      }
+    }))
+  ]);
+  const favorites = favoriteSnapshot.docs
+    .filter((item) => item.ref.path.startsWith("userFavorites/"))
+    .map((item) => ({ path: item.ref.path, data: backupValue(item.data()) }));
   return {
     format: "przepisy-rodzinne-backup",
-    version: 1,
+    version: 2,
     createdAt: new Date().toISOString(),
-    collections: Object.fromEntries(snapshots.map((snapshot, index) => [backupCollections[index], snapshot.docs.map((item) => ({ id: item.id, data: backupValue(item.data()) }))]))
+    collections: Object.fromEntries(snapshots.map((snapshot, index) => [backupCollections[index], snapshot.docs.map((item) => ({ id: item.id, data: backupValue(item.data()) }))])),
+    userFavorites: favorites,
+    portraits: portraits.filter(Boolean)
   };
 }
 
@@ -1181,7 +1227,7 @@ document.getElementById("download-backup").addEventListener("click", async () =>
     link.download = `przepisy-rodzinne-kopia-${backup.createdAt.slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
-    message.textContent = "Kopia bezpieczeństwa została pobrana na to urządzenie.";
+    message.textContent = "Kopia bezpieczeństwa została pobrana na to urządzenie (wraz z kontami, zapisami i zdjęciami).";
   } catch {
     message.textContent = "Nie udało się przygotować kopii. Spróbuj ponownie.";
   }
@@ -1194,15 +1240,28 @@ document.getElementById("restore-backup").addEventListener("change", async (even
   if (!file || state.role !== "admin") return;
   try {
     const backup = JSON.parse(await file.text());
-    if (backup.format !== "przepisy-rodzinne-backup" || backup.version !== 1 || !backup.collections || !backupCollections.every((name) => Array.isArray(backup.collections[name]))) throw new Error("invalid backup");
+    const requiredCollections = backup.version === 1 ? legacyBackupCollections : backupCollections;
+    if (backup.format !== "przepisy-rodzinne-backup" || ![1, 2].includes(backup.version) || !backup.collections || !requiredCollections.every((name) => Array.isArray(backup.collections[name]))) throw new Error("invalid backup");
     const date = backup.createdAt ? new Date(backup.createdAt).toLocaleString("pl-PL") : "nieznaną datą";
     if (!window.confirm(`Przywrócić kopię z ${date}? Dane zapisane w kopii zastąpią obecne wersje tych samych przepisów i ustaleń. Nowsze dane, których nie ma w kopii, pozostaną bez zmian.`)) return;
     message.textContent = "Przywracam kopię bezpieczeństwa…";
-    const writes = backupCollections.flatMap((name) => backup.collections[name].map((item) => ({ name, id: item.id, data: restoreBackupValue(item.data) })));
+    const writes = requiredCollections.flatMap((name) => backup.collections[name].map((item) => ({ path: `${name}/${item.id}`, data: restoreBackupValue(item.data) })));
+    const favoriteWrites = backup.version === 2 && Array.isArray(backup.userFavorites)
+      ? backup.userFavorites.filter((item) => /^userFavorites\/[^/]+\/recipes\/[^/]+$/.test(item.path || "")).map((item) => ({ path: item.path, data: restoreBackupValue(item.data) }))
+      : [];
+    writes.push(...favoriteWrites);
     for (let offset = 0; offset < writes.length; offset += 400) {
       const batch = writeBatch(db);
-      writes.slice(offset, offset + 400).forEach((item) => batch.set(doc(db, item.name, item.id), item.data));
+      writes.slice(offset, offset + 400).forEach((item) => batch.set(doc(db, item.path), item.data));
       await batch.commit();
+    }
+    if (backup.version === 2 && Array.isArray(backup.portraits)) {
+      for (const portrait of backup.portraits.filter((item) => ["emilka", "kasia"].includes(item.person) && typeof item.dataUrl === "string")) {
+        const response = await fetch(portrait.dataUrl);
+        const blob = await response.blob();
+        await uploadBytes(ref(storage, `portraits/${portrait.person}.jpg`), blob, { contentType: portrait.contentType || "image/jpeg" });
+      }
+      await Promise.all([loadPortrait("emilka"), loadPortrait("kasia")]);
     }
     state.histamineProducts = null;
     state.ingredientRules = null;
@@ -1242,12 +1301,19 @@ document.getElementById("private-recipe-import").addEventListener("change", asyn
   try {
     const imported = JSON.parse(await file.text());
     if (!Array.isArray(imported) || !imported.length || imported.some((recipe) => !recipe.id || !recipe.title || !Array.isArray(recipe.ingredients))) throw new Error("invalid import");
-    for (let offset = 0; offset < imported.length; offset += 400) {
+    const uniqueRecipes = [...new Map(imported.map((recipe) => [recipe.id, recipe])).values()];
+    const existing = await getDocs(collection(db, "recipes"));
+    const existingIds = new Set(existing.docs.map((item) => item.id));
+    const newRecipes = uniqueRecipes.filter((recipe) => !existingIds.has(recipe.id));
+    const skipped = uniqueRecipes.length - newRecipes.length;
+    for (let offset = 0; offset < newRecipes.length; offset += 400) {
       const batch = writeBatch(db);
-      imported.slice(offset, offset + 400).forEach((recipe) => batch.set(doc(db, "recipes", recipe.id), recipe));
+      newRecipes.slice(offset, offset + 400).forEach((recipe) => batch.set(doc(db, "recipes", recipe.id), recipe));
       await batch.commit();
     }
-    message.textContent = `Dodano ${imported.length} prywatnych przepisów do bazy.`;
+    message.textContent = skipped
+      ? `Dodano ${newRecipes.length} nowych przepisów. Pominięto ${skipped} istniejących — ich redakcje Kasi zostały zachowane.`
+      : `Dodano ${newRecipes.length} prywatnych przepisów do bazy.`;
   } catch {
     message.textContent = "Nie udało się wczytać pliku przepisów. Wybierz właściwy plik JSON.";
   } finally {
